@@ -12,9 +12,9 @@ import Data.Fixed
 oneM = 60
 oneH = oneM * 60
 
-type Tables = [(UTCTime, [TableState])]
+type Tables = [(UTCTime, [TimeSlot])]
 
-data TableState = TableState {isFree :: Bool,
+data TimeSlot = TimeSlot {isFree :: Bool,
                               name :: String,
                               phone :: String,
                               persons :: Int 
@@ -43,7 +43,8 @@ initDay :: UTCTime ->
            Int ->
            DayL
 initDay currDay openT closeT interval numT = 
-    DayL currDay [] openT closeT interval numT
+    DayL currDay timeSlots openT closeT interval numT where
+        timeSlots = initTimes openT closeT [] interval numT
 
 
 initTimes :: UTCTime -> 
@@ -61,10 +62,19 @@ initTimes openT closeT times interval numT =
         tables = initTables numT 
         newOpenT = addUTCTime (realToFrac interval) openT
 
-initTables :: Int -> [TableState]
+initTables :: Int -> [TimeSlot]
 initTables 0 = [] 
 initTables n = table : initTables (n-1) where
-    table = TableState True "" "" 0 
+    table = TimeSlot True "" "" 0 
+
+
+
+showTimes :: Tables -> [UTCTime]
+showTimes times = res2 
+    where
+        fr = filter(\table -> isFree table)
+        res = filter(\x -> not (null(fr (snd $ x)))) times
+        res2 = map fst res    
 
 
 book :: IO()
@@ -73,13 +83,11 @@ book = do
     let currDay = toGregorian $ utctDay currTime 
     let openT = mkUTCTime currDay (10, 0, 0)
     let closeT = mkUTCTime currDay (22, 0, 0)
-    let dayS = initTimes openT closeT [] 900 5
-    let newDay = initDay currTime openT closeT 15 5 
-    let res = snd (dayS !! 1)
-    let fi = filter(\x -> isFree x == False) res
-    putStrLn . show $ fi 
-
-
+    -- let dayS = initTimes openT closeT [] 900 5
+    let newDay = initDay currTime openT closeT (15*oneM) 5 
+    let dayS = tables newDay
+    let kek = showTimes dayS
+    putStrLn . show $ kek 
 
 
 
