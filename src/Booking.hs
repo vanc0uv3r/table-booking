@@ -19,7 +19,7 @@ type Tables = [Table]
 type Name = String
 type Phone = String
 type Persons = Int 
-
+type Interval = Int
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
@@ -76,23 +76,30 @@ initTables n time = table : initTables (n-1) time where
     table = Table time True "" "" 0
 
 
-showTimes :: Tables -> [UTCTime]
-showTimes times = nub res
+showFreeTimes :: Tables -> [UTCTime]
+showFreeTimes times = nub res
     where
         fr = filter(\table -> isFree table) times
         res = map (\x -> time x) fr 
 
+showBookTimes :: Tables -> [UTCTime]
+showBookTimes times = nub res
+    where
+        fr = filter(\table -> not . isFree $ table) times
+        res = map (\x -> time x) fr 
 
 bookTable :: Tables -> 
              UTCTime ->
+             Interval -> 
              Name ->
              Phone ->
              Persons ->
              Tables 
-bookTable tables bookT name phone persons  = 
+bookTable tables bookT interval name phone persons  = 
     newTables where
         reserveSlots = filter(\x -> bookT <= time x && 
-                             (addUTCTime 7200 bookT) > time x) tables 
+                             (addUTCTime (realToFrac interval) bookT) > time x) 
+                                tables 
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
                                  time table == time_ &&
@@ -140,12 +147,12 @@ book = do
     -- let newDay = initDay currTime openT closeT (15*oneM) 5 
     let bookT = mkUTCTime currDay (11, 00, 0)
     let dayS = initTimes openT closeT [] 3600 2 
-    putStrLn . show $ showTimes dayS
-    let res = bookTable dayS bookT "Ivan" "777" 2
-    let res2 = bookTable res bookT "Ivan" "888" 2
-    putStrLn . show $ showTimes res2 
+    putStrLn . show $ showFreeTimes dayS
+    let res = bookTable dayS bookT 7200 "Ivan" "777" 2
+    let res2 = bookTable res bookT 7200 "Ivan" "888" 2
+    putStrLn . show $ showFreeTimes res2 
     putStrLn . show $ res2 
     let res3 = unBookTable res2 bookT "777" 
-    putStrLn . show $ showTimes res3 
+    putStrLn . show $ showFreeTimes res3 
     putStrLn . show $ res3 
 
