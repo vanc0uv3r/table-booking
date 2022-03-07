@@ -2,9 +2,9 @@ name:                table-booking
 version:             0.1.0.0
 github:              "githubuser/table-booking"
 license:             BSD3
-author:              "Author name here"
+author:              "Ivan S"
 maintainer:          "example@example.com"
-copyright:           "2022 Author name here"
+copyright:           "2022 Ivan S"
 
 extra-source-files:
 - README.md
@@ -23,6 +23,8 @@ dependencies:
 - base >= 4.7 && < 5
 - time
 - lens
+- brick
+- vty
 library:
   source-dirs: src
 
