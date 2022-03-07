@@ -16,6 +16,10 @@ oneM = 60
 oneH = oneM * 60
 
 type Tables = [Table]
+type Name = String
+type Phone = String
+type Persons = Int 
+
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
@@ -81,9 +85,9 @@ showTimes times = nub res
 
 bookTable :: Tables -> 
              UTCTime ->
-             String ->
-             String ->
-             Int ->
+             Name ->
+             Phone ->
+             Persons ->
              Tables 
 bookTable tables bookT name phone persons  = 
     newTables where
@@ -91,24 +95,38 @@ bookTable tables bookT name phone persons  =
                              (addUTCTime 7200 bookT) > time x) tables 
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
-                                 time table == time_
-                                 && isFree table == True) tables) !! 0) times 
-        newTables = helper tables indexes name phone persons
+                                 time table == time_ &&
+                                 isFree table) tables) !! 0) times 
+        newTables = helper tables indexes False name phone persons
+
+
+unBookTable :: Tables -> UTCTime -> Phone -> Tables
+unBookTable tables bookT phone_ = 
+    newTables where
+         reserveSlots = filter(\x -> bookT <= time x &&
+                              (addUTCTime 7200 bookT) > time x) tables
+         times = nub (map (\x -> time x) reserveSlots)
+         indexes = map (\time_ -> (findIndices(\table ->
+                                  time table == time_ &&
+                                  not (isFree table) &&
+                                  phone table == phone_) tables) !! 0) times
+         newTables = helper tables indexes True "" "" 0 
 
 
 helper :: Tables ->
           [Int] -> 
-          String ->
-          String ->
-          Int ->  
+          Bool ->
+          Name ->
+          Phone ->
+          Persons ->  
           Tables
-helper tables (x:xs) name_ phone_ persons_ =
+helper tables (x:xs) book_ name_ phone_ persons_ =
     if length (x:xs) == 1
         then newTables 
-        else helper newTables xs name_ phone_ persons_
+        else helper newTables xs book_ name_ phone_ persons_
     where
         xthTable = tables !! x
-        newTables = tables & element x .~ xthTable {isFree = False, 
+        newTables = tables & element x .~ xthTable {isFree = book_, 
                                                     name = name_, 
                                                     phone = phone_, 
                                                     persons = persons_}
@@ -124,8 +142,10 @@ book = do
     let dayS = initTimes openT closeT [] 3600 2 
     putStrLn . show $ showTimes dayS
     let res = bookTable dayS bookT "Ivan" "777" 2
-    let res2 = bookTable res bookT "Ivan" "777" 2
+    let res2 = bookTable res bookT "Ivan" "888" 2
     putStrLn . show $ showTimes res2 
     putStrLn . show $ res2 
-
+    let res3 = unBookTable res2 bookT "777" 
+    putStrLn . show $ showTimes res3 
+    putStrLn . show $ res3 
 
