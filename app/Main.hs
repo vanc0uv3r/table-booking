@@ -2,6 +2,9 @@ module Main where
 
 import Lib
 import Booking
+import Tui
+
 
 main :: IO ()
-main = book 
+main = tui
+--main = book 
