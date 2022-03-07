@@ -7,17 +7,20 @@ import System.IO
 import Data.Time
 import Data.Maybe
 import Data.Fixed
+import Data.List
+import Control.Lens
 
 
 oneM = 60
 oneH = oneM * 60
 
-type Tables = [(UTCTime, [TimeSlot])]
+type Tables = [Table]
 
-data TimeSlot = TimeSlot {isFree :: Bool,
-                              name :: String,
-                              phone :: String,
-                              persons :: Int 
+data Table = Table {time :: UTCTime,
+                       isFree :: Bool,
+                       name :: String,
+                       phone :: String,
+                       persons :: Int 
 } deriving Show
 
 data DayL = DayL {date :: UTCTime,
@@ -52,30 +55,61 @@ initTimes :: UTCTime ->
              Tables ->
              Int -> 
              Int -> 
-             Tables    
+             [Table]    
 initTimes openT closeT times interval numT = 
     if diffUTCTime closeT openT >= realToFrac interval then
-        time : initTimes newOpenT closeT times interval numT 
+        time ++ initTimes newOpenT closeT times interval numT 
     else []
     where
-        time = (openT, tables)
-        tables = initTables numT 
+        time = initTables numT openT
         newOpenT = addUTCTime (realToFrac interval) openT
 
-initTables :: Int -> [TimeSlot]
-initTables 0 = [] 
-initTables n = table : initTables (n-1) where
-    table = TimeSlot True "" "" 0 
 
+initTables :: Int -> UTCTime -> [Table]
+initTables 0 _ = [] 
+initTables n time = table : initTables (n-1) time where
+    table = Table time True "" "" 0
 
 
 showTimes :: Tables -> [UTCTime]
-showTimes times = res2 
+showTimes times = nub res
     where
-        fr = filter(\table -> isFree table)
-        res = filter(\x -> not (null(fr (snd $ x)))) times
-        res2 = map fst res    
+        fr = filter(\table -> isFree table) times
+        res = map (\x -> time x) fr 
 
+
+bookTable :: Tables -> 
+             UTCTime ->
+             String ->
+             String ->
+             Int ->
+             Tables 
+bookTable tables bookT name phone persons  = 
+    newTables where
+        reserveSlots = filter(\x -> bookT <= time x && 
+                             (addUTCTime 7200 bookT) > time x) tables 
+        times = nub (map (\x -> time x) reserveSlots)
+        indexes = map (\time_ -> (findIndices(\table -> 
+                                 time table == time_) tables) !! 0) times 
+        newTables = helper tables indexes name phone persons
+
+
+helper :: Tables ->
+          [Int] -> 
+          String ->
+          String ->
+          Int ->  
+          Tables
+helper tables (x:xs) name_ phone_ persons_ =
+    if length (x:xs) == 1
+        then newTables 
+        else helper newTables xs name_ phone_ persons_
+    where
+        xthTable = tables !! x
+        newTables = tables & element x .~ xthTable {isFree = False, 
+                                                    name = name_, 
+                                                    phone = phone_, 
+                                                    persons = persons_}
 
 book :: IO()
 book = do  
@@ -84,10 +118,12 @@ book = do
     let openT = mkUTCTime currDay (10, 0, 0)
     let closeT = mkUTCTime currDay (22, 0, 0)
     -- let dayS = initTimes openT closeT [] 900 5
-    let newDay = initDay currTime openT closeT (15*oneM) 5 
-    let dayS = tables newDay
-    let kek = showTimes dayS
-    putStrLn . show $ kek 
-
+    -- let newDay = initDay currTime openT closeT (15*oneM) 5 
+    -- let dayS = tables newDay
+ --   let kek = showTimes dayS
+    let bookT = mkUTCTime currDay (10, 30, 0)
+    let dayS = initTimes openT closeT [] 3600 5 
+    let res = bookTable dayS (mkUTCTime currDay (11, 00, 0)) "Ivan" "777" 2
+    putStrLn . show $ res
 
 
