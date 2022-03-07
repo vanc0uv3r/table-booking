@@ -8,6 +8,7 @@ import Data.Time
 import Data.Maybe
 import Data.Fixed
 import Data.List
+import Debug.Trace
 import Control.Lens
 
 
@@ -17,10 +18,10 @@ oneH = oneM * 60
 type Tables = [Table]
 
 data Table = Table {time :: UTCTime,
-                       isFree :: Bool,
-                       name :: String,
-                       phone :: String,
-                       persons :: Int 
+                    isFree :: Bool,
+                    name :: String,
+                    phone :: String,
+                    persons :: Int 
 } deriving Show
 
 data DayL = DayL {date :: UTCTime,
@@ -90,7 +91,8 @@ bookTable tables bookT name phone persons  =
                              (addUTCTime 7200 bookT) > time x) tables 
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
-                                 time table == time_) tables) !! 0) times 
+                                 time table == time_
+                                 && isFree table == True) tables) !! 0) times 
         newTables = helper tables indexes name phone persons
 
 
@@ -117,13 +119,13 @@ book = do
     let currDay = toGregorian $ utctDay currTime 
     let openT = mkUTCTime currDay (10, 0, 0)
     let closeT = mkUTCTime currDay (22, 0, 0)
-    -- let dayS = initTimes openT closeT [] 900 5
     -- let newDay = initDay currTime openT closeT (15*oneM) 5 
-    -- let dayS = tables newDay
- --   let kek = showTimes dayS
-    let bookT = mkUTCTime currDay (10, 30, 0)
-    let dayS = initTimes openT closeT [] 3600 5 
-    let res = bookTable dayS (mkUTCTime currDay (11, 00, 0)) "Ivan" "777" 2
-    putStrLn . show $ res
+    let bookT = mkUTCTime currDay (11, 00, 0)
+    let dayS = initTimes openT closeT [] 3600 2 
+    putStrLn . show $ showTimes dayS
+    let res = bookTable dayS bookT "Ivan" "777" 2
+    let res2 = bookTable res bookT "Ivan" "777" 2
+    putStrLn . show $ showTimes res2 
+    putStrLn . show $ res2 
 
 
