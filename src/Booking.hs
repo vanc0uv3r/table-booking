@@ -48,16 +48,24 @@ mkUTCTime (year, mon, day) (hour, min, sec) =
   UTCTime (fromGregorian year mon day)
           (timeOfDayToTime (TimeOfDay hour min sec))
 
-initDay :: UTCTime ->
-           UTCTime ->
-           UTCTime ->
-           Int ->
-           Int ->
-           DayL
-initDay currDay openT closeT interval numT = 
-    DayL currDay timeSlots openT closeT interval numT where
-        timeSlots = initTimes openT closeT [] interval numT
 
+-- get open time, close time, list of tables, interval, number of tables, 
+-- number of days and returns list of initialized tables
+initDays :: UTCTime -> 
+            UTCTime -> 
+            Tables ->
+            Interval -> 
+            TablesNum -> 
+            Int ->
+            Tables 
+initDays openT closeT times interval numT days =
+    if days > 0 then  
+        day ++ initDays newOpenT newCloseT times interval numT (days-1)
+    else []
+    where
+        day = initTimes openT closeT [] interval numT
+        newOpenT = addUTCTime (realToFrac (oneH * 24)) openT
+        newCloseT = addUTCTime (realToFrac (oneH * 24)) closeT 
 
 -- Gets open time, close time, list of tables, interval, 
 -- number of tables and returns list of initialized tables
@@ -168,14 +176,19 @@ book = do
     let openT = mkUTCTime currDay (10, 0, 0)
     let closeT = mkUTCTime currDay (22, 0, 0)
     -- let newDay = initDay currTime openT closeT (15*oneM) 5 
+    let interval = 7200
+    let tableNum = 2
+    let days = 3
     let bookT = mkUTCTime currDay (11, 00, 0)
-    let dayS = initTimes openT closeT [] 3600 2 
-    putStrLn . show $ showFreeTimes dayS
-    let res = bookTable dayS bookT 7200 "Ivan" "777" 2
-    let res2 = bookTable res bookT 7200 "Ivan" "888" 2
-    putStrLn . show $ showFreeTimes res2 
-    putStrLn . show $ res2 
-    let res3 = unBookTable res2 7200 bookT "777" 
-    putStrLn . show $ showFreeTimes res3 
-    putStrLn . show $ res3 
+    let day = initDays openT closeT [] interval tableNum days 
+    putStrLn . show $ day
+--    let dayS = initTimes openT closeT [] 3600 2 
+--    putStrLn . show $ showFreeTimes dayS
+--    let res = bookTable dayS bookT 7200 "Ivan" "777" 2
+--    let res2 = bookTable res bookT 7200 "Ivan" "888" 2
+--    putStrLn . show $ showFreeTimes res2 
+--    putStrLn . show $ res2 
+--    let res3 = unBookTable res2 7200 bookT "777" 
+--    putStrLn . show $ showFreeTimes res3 
+--    putStrLn . show $ res3 
 
