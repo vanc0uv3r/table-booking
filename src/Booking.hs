@@ -20,6 +20,9 @@ type Name = String
 type Phone = String
 type Persons = Int 
 type Interval = Int
+type Indexes = [Int]
+type TablesNum = Int
+
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
@@ -37,6 +40,7 @@ data DayL = DayL {date :: UTCTime,
 } deriving Show
 
 
+-- Get date in format yy-mm-dd hh-mm-ss and return UTCTime object 
 mkUTCTime :: (Integer, Int, Int)
           -> (Int, Int, Pico)
           -> UTCTime
@@ -55,12 +59,14 @@ initDay currDay openT closeT interval numT =
         timeSlots = initTimes openT closeT [] interval numT
 
 
+-- Gets open time, close time, list of tables, interval, 
+-- number of tables and returns list of initialized tables
 initTimes :: UTCTime -> 
              UTCTime -> 
              Tables ->
-             Int -> 
-             Int -> 
-             [Table]    
+             Interval -> 
+             TablesNum -> 
+             Tables 
 initTimes openT closeT times interval numT = 
     if diffUTCTime closeT openT >= realToFrac interval then
         time ++ initTimes newOpenT closeT times interval numT 
@@ -70,24 +76,32 @@ initTimes openT closeT times interval numT =
         newOpenT = addUTCTime (realToFrac interval) openT
 
 
-initTables :: Int -> UTCTime -> [Table]
+-- Gets number of table and table time and returns list of 
+-- equal structures(Table) 
+initTables :: TablesNum -> UTCTime -> [Table]
 initTables 0 _ = [] 
 initTables n time = table : initTables (n-1) time where
     table = Table time True "" "" 0
 
 
+--Gets list of tables and returns list of UTCTime where isFree==True
 showFreeTimes :: Tables -> [UTCTime]
 showFreeTimes times = nub res
     where
         fr = filter(\table -> isFree table) times
         res = map (\x -> time x) fr 
 
+
+--Gets list of tables and returns list of UTCTime where isFree==False
 showBookTimes :: Tables -> [UTCTime]
 showBookTimes times = nub res
     where
         fr = filter(\table -> not . isFree $ table) times
         res = map (\x -> time x) fr 
 
+
+-- Gets list of tables, time for booking, duration of booking, 
+-- name, phone, num of persons and return updated list with booked table
 bookTable :: Tables -> 
              UTCTime ->
              Interval -> 
@@ -98,8 +112,7 @@ bookTable :: Tables ->
 bookTable tables bookT interval name phone persons  = 
     newTables where
         reserveSlots = filter(\x -> bookT <= time x && 
-                             (addUTCTime (realToFrac interval) bookT) > time x) 
-                                tables 
+                   (addUTCTime (realToFrac interval) bookT) > time x) tables
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
                                  time table == time_ &&
@@ -107,11 +120,18 @@ bookTable tables bookT interval name phone persons  =
         newTables = helper tables indexes False name phone persons
 
 
-unBookTable :: Tables -> UTCTime -> Phone -> Tables
-unBookTable tables bookT phone_ = 
+
+-- Gets list of tables, time of booked table, phone
+-- returns updated list with unbooked table
+unBookTable :: Tables ->
+               Interval -> 
+               UTCTime -> 
+               Phone -> 
+               Tables
+unBookTable tables interval bookT phone_ = 
     newTables where
          reserveSlots = filter(\x -> bookT <= time x &&
-                              (addUTCTime 7200 bookT) > time x) tables
+                   (addUTCTime (realToFrac interval) bookT) > time x) tables
          times = nub (map (\x -> time x) reserveSlots)
          indexes = map (\time_ -> (findIndices(\table ->
                                   time table == time_ &&
@@ -120,8 +140,11 @@ unBookTable tables bookT phone_ =
          newTables = helper tables indexes True "" "" 0 
 
 
+-- help function that gets list of tables, indexes of tables to 
+-- book/unbook, action(book/unbook), name, phone, persons and 
+-- returns updated list of tables with booked/unbooked table
 helper :: Tables ->
-          [Int] -> 
+          Indexes -> 
           Bool ->
           Name ->
           Phone ->
@@ -152,7 +175,7 @@ book = do
     let res2 = bookTable res bookT 7200 "Ivan" "888" 2
     putStrLn . show $ showFreeTimes res2 
     putStrLn . show $ res2 
-    let res3 = unBookTable res2 bookT "777" 
+    let res3 = unBookTable res2 7200 bookT "777" 
     putStrLn . show $ showFreeTimes res3 
     putStrLn . show $ res3 
 
