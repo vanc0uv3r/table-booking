@@ -17,9 +17,9 @@ oneH = oneM * 60
 
 type Tables = [Table]
 type Times = [UTCTime]
-type Name = String
-type Phone = String
-type Persons = Int 
+type Name = Maybe String
+type Phone = Maybe String
+type Persons = Maybe Int 
 type Interval = Int
 type Indexes = [Int]
 type TablesNum = Int
@@ -29,9 +29,9 @@ type CloseTime = UTCTime
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
-                    name :: String,
-                    phone :: String,
-                    persons :: Int 
+                    name :: Maybe String,
+                    phone :: Maybe String,
+                    persons :: Maybe Int 
 } deriving Show
 
 
@@ -85,7 +85,7 @@ initTimes openT closeT times interval numT =
 initTables :: TablesNum -> UTCTime -> [Table]
 initTables 0 _ = [] 
 initTables n time = table : initTables (n-1) time where
-    table = Table time True "" "" 0
+    table = Table time True Nothing Nothing Nothing 
 
 
 --Gets list of tables and returns list of UTCTime where isFree==True
@@ -139,7 +139,7 @@ unBookTable tables interval bookT phone_ =
                                   time table == time_ &&
                                   not (isFree table) &&
                                   phone table == phone_) tables) !! 0) times
-         newTables = helper tables indexes True "" "" 0 
+         newTables = helper tables indexes True Nothing Nothing Nothing 
 
 
 -- help function that gets list of tables, indexes of tables to 
@@ -167,22 +167,23 @@ book :: IO()
 book = do  
     currTime <- getCurrentTime
     let currDay = toGregorian $ utctDay currTime 
-    let openT = mkUTCTime currDay (10, 0, 0)
-    let closeT = mkUTCTime currDay (22, 0, 0)
-    -- let newDay = initDay currTime openT closeT (15*oneM) 5 
-    let interval = 7200
-    let tableNum = 2
-    let days = 3
-    let bookT = mkUTCTime currDay (10, 00, 0)
-    let day = initDays openT closeT [] interval tableNum days 
-    putStrLn . show $ day
---    let dayS = initTimes openT closeT [] 3600 2 
-    putStrLn . show $ showFreeTimes day
-    let res = bookTable day bookT 7200 "Ivan" "777" 2
-    let res2 = bookTable res bookT 7200 "Ivan" "888" 2
-    putStrLn . show $ showFreeTimes res2 
-    putStrLn . show $ res2 
-    let res3 = unBookTable res2 7200 bookT "777" 
-    putStrLn . show $ showFreeTimes res3 
-    putStrLn . show $ res3 
+        openT = mkUTCTime currDay (10, 0, 0)
+        closeT = mkUTCTime currDay (22, 0, 0)
+        interval = 7200
+        tableNum = 2
+        days = 3
+        name = Just "Ivan"
+        phone = Just "777"
+        phone2 = Just "888"
+        persons = Just 2
+        bookT = mkUTCTime currDay (10, 00, 0)
+        day = initDays openT closeT [] interval tableNum days 
+        res = bookTable day bookT interval name phone persons
+        res2 = bookTable res bookT interval name phone2 persons 
+
+    --putStrLn . show $ showFreeTimes day
+    --putStrLn . show $ showFreeTimes res2 
+    --putStrLn . show $ res2 
+    --putStrLn . show $ showFreeTimes res3 
+    --putStrLn . show $ res3 
 
