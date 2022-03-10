@@ -63,6 +63,7 @@ initDays openT closeT times interval numT days =
         newOpenT = addUTCTime (realToFrac (oneH * 24)) openT
         newCloseT = addUTCTime (realToFrac (oneH * 24)) closeT 
 
+
 -- Gets open time, close time, list of tables, interval, 
 -- number of tables and returns list of initialized tables
 initTimes :: OpenTime -> 
@@ -100,6 +101,21 @@ showBookTimes :: Tables -> Times
 showBookTimes times = nub res
     where
         res = map (\x -> time x) . filter(not . isFree) $ times
+
+
+showDayTables :: Tables ->
+                 UTCTime ->
+                 Tables 
+showDayTables tables day = res
+    where
+        res = filter(\tab -> (utctDay $ day) == (utctDay $ (time tab))) tables 
+
+
+showDays :: Tables ->
+            [Day] 
+showDays tables = res
+    where
+        res = nub (map (\tab -> utctDay . time $ tab) tables)
 
 
 -- Gets list of tables, time for booking, duration of booking, 
@@ -163,6 +179,8 @@ helper tables (x:xs) book_ name_ phone_ persons_ =
                                                     phone = phone_, 
                                                     persons = persons_}
 
+
+
 book :: IO()
 book = do  
     currTime <- getCurrentTime
@@ -180,6 +198,10 @@ book = do
         day = initDays openT closeT [] interval tableNum days 
         res = bookTable day bookT interval name phone persons
         res2 = bookTable res bookT interval name phone2 persons 
+        res3 = showDays day 
+    
+    putStrLn . show $ day
+    putStrLn . show $ res3
 
     --putStrLn . show $ showFreeTimes day
     --putStrLn . show $ showFreeTimes res2 
