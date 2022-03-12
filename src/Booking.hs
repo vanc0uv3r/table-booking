@@ -10,6 +10,8 @@ import Data.Fixed
 import Data.List
 import Debug.Trace
 import Control.Lens
+import System.Console.ANSI
+
 
 
 oneM = 60
@@ -104,18 +106,24 @@ showBookTimes times = nub res
 
 
 showDayTables :: Tables ->
-                 UTCTime ->
-                 Tables 
-showDayTables tables day = res
+                 Day ->
+                 Times 
+showDayTables tables day = res2
     where
-        res = filter(\tab -> (utctDay $ day) == (utctDay $ (time tab))) tables 
+        res = filter(\tab -> day == (utctDay $ (time tab))) tables 
+        res2 = nub (map (\tab -> time $ tab) res)
+
+
+timeToString :: Times -> [String]
+timeToString times = map (formatTime defaultTimeLocale "%H:%M") times 
 
 
 showDays :: Tables ->
             [Day] 
 showDays tables = res
     where
-        res = nub (map (\tab -> utctDay . time $ tab) tables)
+        tmp = filter (isFree) tables
+        res = nub (map (\tab -> utctDay . time $ tab) tmp)
 
 
 -- Gets list of tables, time for booking, duration of booking, 
@@ -179,10 +187,43 @@ helper tables (x:xs) book_ name_ phone_ persons_ =
                                                     phone = phone_, 
                                                     persons = persons_}
 
+numberList :: Show a => Int -> [a] -> String
+numberList _ [] = ""
+numberList num (x:xs) = "\n" ++ show num ++ ". " ++ show x ++ 
+                        numberList (num+1) xs
+
+
+dayWidget :: [Day] -> String
+dayWidget tables = tmp ++ res ++ "\n[b]. Go back"
+    where res = numberList 1 tables 
+          tmp = "Choose the day" 
+
+
+timesWidget :: Times -> String
+timesWidget tables = tmp ++ res ++ "\n[b]. Go back"
+    where res = numberList 1 (timeToString tables) 
+          tmp = "Choose the time book" 
+
+
+runner :: Tables -> IO ()
+runner tables = do
+    let days = showDays tables 
+    putStrLn . dayWidget $ days 
+    choice <- getLine
+    let day = days !! ((read choice) - 1)
+    let dayTables = showDayTables tables day
+    clearScreen
+    putStrLn . timesWidget $ dayTables
+    choice <- getLine
+    let time = dayTables !! ((read choice) - 1)        
+    
+    putStrLn . show $ time 
 
 
 book :: IO()
-book = do  
+book = do
+    hSetBuffering stdout NoBuffering 
+    clearScreen
     currTime <- getCurrentTime
     let currDay = toGregorian $ utctDay currTime 
         openT = mkUTCTime currDay (10, 0, 0)
@@ -196,13 +237,13 @@ book = do
         persons = Just 2
         bookT = mkUTCTime currDay (10, 00, 0)
         day = initDays openT closeT [] interval tableNum days 
-        res = bookTable day bookT interval name phone persons
-        res2 = bookTable res bookT interval name phone2 persons 
-        res3 = showDays day 
-    
-    putStrLn . show $ day
-    putStrLn . show $ res3
-
+        --res = bookTable day bookT interval name phone persons
+        --res2 = bookTable res bookT interval name phone2 persons 
+        --res3 = showDays day
+        --res4 = showDayTables day currTime  
+    runner day    
+    -- putStrLn (numberList 1 res3)
+    -- putStrLn (numberList 1 (timeToString res4))
     --putStrLn . show $ showFreeTimes day
     --putStrLn . show $ showFreeTimes res2 
     --putStrLn . show $ res2 
