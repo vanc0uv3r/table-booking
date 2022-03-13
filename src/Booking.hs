@@ -12,7 +12,14 @@ import Debug.Trace
 import Control.Lens
 import System.Console.ANSI
 import Debug.Trace
+import System.Exit
+import Data.Char
 
+data State =
+      Role
+    | ChooseDay 
+    | ChooseTime
+    | EditForm
 
 oneM = 60
 oneH = oneM * 60
@@ -138,8 +145,9 @@ bookTable :: Tables ->
              Tables 
 bookTable tables bookT interval name phone persons  = 
     newTables where
-        reserveSlots = filter(\x -> bookT <= time x && isFree x &&  
-                   (addUTCTime (realToFrac interval) bookT) > time x) tables
+        reserveSlots = filter(\x -> bookT <= time x 
+                 && isFree x 
+                 && (addUTCTime (realToFrac interval) bookT) > time x) tables
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
                                  time table == time_ &&
@@ -206,38 +214,87 @@ timesWidget tables = tmp ++ res ++ "\n[b]. Go back"
           tmp = "Choose the time book" 
 
 
-runner :: Tables -> IO ()
-runner tables = do
-    let days = showDays tables 
-    putStrLn . dayWidget $ days 
-    choice <- getLine
-    let day = days !! ((read choice) - 1)
-    let dayTables = showDayTables tables day
-    clearScreen
-    putStrLn . timesWidget $ dayTables
-    choice <- getLine
-    let bookTime = dayTables !! ((read choice) - 1)        
-    clearScreen
-    putStrLn "Enter your name:"
-    name <- getLine
-    putStrLn "Enter your phone:"
-    phone <- getLine     
-    putStrLn "Enter number of persons:"
-    persons <- getLine
-    clearScreen
-    putStrLn ("Check your data:\n" ++ name ++ "\n" ++ phone ++ "\n" ++ persons) 
-    c <- getLine
-    let kek = Just name 
-    let kek1 = Just phone
-    let kek2 = Just(read persons) 
-    let days2 = bookTable tables bookTime 7200 kek kek1 kek2
-    putStrLn . show $ days2
-    putStr "You have successfuly booked the table on "
-    putStrLn . show $ bookTime
-    b <- getLine
-    clearScreen
-    -- putStrLn . show $ days2
-    runner days2
+roleWidget :: String
+roleWidget = "Welcome to table booking system\n1.Book a table\n" ++
+             "2.Login to admin panel"
+
+
+isNum :: String -> Bool
+isNum ""  = False
+isNum "." = False
+isNum xs  =
+  case dropWhile isDigit xs of
+    ""       -> True
+    ('.':ys) -> all isDigit ys
+    _        -> False
+
+
+
+runner :: Tables -> 
+          State -> 
+          String -> 
+          String ->
+          IO ()
+runner tables widget choice1 choice2 = do
+    case widget of
+        Role -> do
+            clearScreen
+            putStrLn $ roleWidget 
+            choice <- getLine
+            runner tables ChooseDay "" ""
+        ChooseDay -> do
+            let days = showDays tables 
+            clearScreen
+            putStrLn . dayWidget $ days 
+            choice <- getLine
+            if choice == "b" 
+                then runner tables ChooseDay "" "" 
+                else if choice == "q" 
+                    then die("Quiting...")
+                    else if isNum choice 
+                        then runner tables ChooseTime choice ""
+                        else do
+                            putStrLn "Invalid option"
+                            runner tables ChooseDay "" ""
+        ChooseTime -> do
+            let days = showDays tables
+                day = days !! ((read choice1) - 1)
+                dayTables = showDayTables tables day
+            clearScreen
+            putStrLn . timesWidget $ dayTables
+            choice <- getLine
+            if choice == "b" then
+                runner tables ChooseDay "" ""
+            else
+                runner tables EditForm choice1 choice
+        EditForm -> do 
+            let days = showDays tables
+                day = days !! ((read choice1) - 1)
+                dayTables = showDayTables tables day
+                bookTime = dayTables !! ((read choice2) - 1)        
+            putStrLn "Enter your name:"
+            name <- getLine
+            putStrLn "Enter your phone:"
+            phone <- getLine     
+            putStrLn "Enter number of persons:"
+            persons <- getLine
+            clearScreen
+            putStrLn ("Check your data:\n" ++ name ++ "\n" ++ 
+                      phone ++ "\n" ++ persons) 
+            c <- getLine
+            if c == "n" then
+                runner tables EditForm choice1 choice2
+            else do 
+                let kek = Just name 
+                    kek1 = Just phone
+                    kek2 = Just(read persons) 
+                    days2 = bookTable tables bookTime 7200 kek kek1 kek2
+                putStr "You have successfuly booked the table on "
+                putStrLn . show $ bookTime
+                putStrLn . show $ days2 
+                b <- getLine
+                clearScreen
+                runner days2 ChooseDay "" ""
 
 book :: IO()
 book = do
@@ -260,7 +317,7 @@ book = do
         --res2 = bookTable res bookT interval name phone2 persons 
         --res3 = showDays day
         --res4 = showDayTables day currTime  
-    runner day    
+    runner day Role "" ""    
     -- putStrLn (numberList 1 res3)
     -- putStrLn (numberList 1 (timeToString res4))
     --putStrLn . show $ showFreeTimes day
