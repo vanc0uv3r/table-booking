@@ -33,9 +33,11 @@ library
   hs-source-dirs:
       src
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , brick
+    , bytestring
     , lens
     , time
     , vty
@@ -49,9 +51,11 @@ executable table-booking-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , brick
+    , bytestring
     , lens
     , table-booking
     , time
@@ -67,9 +71,11 @@ test-suite table-booking-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-terminal
+      aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , brick
+    , bytestring
     , lens
     , table-booking
     , time

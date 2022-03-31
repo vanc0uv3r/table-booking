@@ -1,9 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module Booking
     (
         book
     ) where 
 
 import System.IO
+import Data.Aeson
+import qualified Data.ByteString.Lazy as B
+import GHC.Generics
 import Data.Time
 import Data.Maybe
 import Data.Fixed
@@ -41,7 +47,7 @@ data Table = Table {time :: UTCTime,
                     name :: Maybe String,
                     phone :: Maybe String,
                     persons :: Maybe Int 
-} deriving Show
+} deriving (Show, Generic)
 
 
 
@@ -124,6 +130,13 @@ showDayTables tables day = res2
 
 timeToString :: Times -> [String]
 timeToString times = map (formatTime defaultTimeLocale "%H:%M") times 
+
+
+showDays :: Tables ->
+            [Day] 
+showDays tables = res
+    where
+        tmp = filter (isFree) tables
 
 
 showDays :: Tables ->
@@ -229,15 +242,20 @@ isNum xs  =
     _        -> False
 
 
+--adminUnbook :: Tables -> IO()
+--adminUnbook tables = do
+                        
+
+
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
-                clearScreen
-                putStrLn "Choose the action:\n1. Book table\n2. Unbook table\n3. Init mounth\n[q] Logout"
-                choice <- getLine
-                case choice of
-                    "1" -> do
-                        clearScreen
-                        runner tables ChooseDay "" ""
+            clearScreen
+            putStrLn "Choose the action:\n1. Book table\n2. Unbook table\n3. Init mounth\n[q] Logout"
+            choice <- getLine
+            case choice of
+                "1" -> do
+                    clearScreen
+                    runner tables ChooseDay "" ""
 
 
 rWidget :: Tables -> State -> String -> String -> IO()
@@ -332,13 +350,7 @@ formWidget tables widget choice1 choice2 = do
                         days2 = bookTable tables bookTime 7200 kek kek1 kek2
                     putStr "You have successfuly booked the table on "
                     putStrLn . show $ bookTime
-                    putStrLn . show $ days2 
-                    b <- getLine
-                    clearScreen
-                    runner days2 Role "" ""
-
-
-runner :: Tables -> 
+runner :: Tables ->
           State -> 
           String -> 
           String ->
@@ -355,12 +367,17 @@ runner tables widget choice1 choice2 = do
         EditForm -> do 
             formWidget tables widget choice1 choice2
 
+readConfig :: IO()
+readConfig = do
+        putStrLn . show $ contents
 
 book :: IO()
 book = do
     hSetBuffering stdout NoBuffering 
     clearScreen
     currTime <- getCurrentTime
+    handle <- openFile "cfg.txt" ReadMode
+    contents <- hGetContents handle    
     let currDay = toGregorian $ utctDay currTime 
         openT = mkUTCTime currDay (10, 0, 0)
         closeT = mkUTCTime currDay (22, 0, 0)
@@ -373,5 +390,6 @@ book = do
         persons = Just 2
         bookT = mkUTCTime currDay (10, 00, 0)
         day = initDays openT closeT [] interval tableNum days 
-    runner day Role "" ""    
+    readConfig 
+    -- runner day Role "" ""    
 

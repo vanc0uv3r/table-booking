@@ -26,6 +26,9 @@ dependencies:
 - brick
 - vty
 - ansi-terminal
+- bytestring
+- aeson
+
 library:
   source-dirs: src
 
