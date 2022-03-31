@@ -203,20 +203,20 @@ numberList num (x:xs) = "\n" ++ show num ++ ". " ++ show x ++
 
 
 dayWidget :: [Day] -> String
-dayWidget tables = tmp ++ res ++ "\n[b]. Go back"
+dayWidget tables = tmp ++ res ++ "\n[b].Go back\n[q].Quit"
     where res = numberList 1 tables 
           tmp = "Choose the day" 
 
 
 timesWidget :: Times -> String
-timesWidget tables = tmp ++ res ++ "\n[b]. Go back"
+timesWidget tables = tmp ++ res ++ "\n[b]. Go back\n[q].Quit"
     where res = numberList 1 (timeToString tables) 
           tmp = "Choose the time book" 
 
 
 roleWidget :: String
 roleWidget = "Welcome to table booking system\n1.Book a table\n" ++
-             "2.Login to admin panel"
+             "2.Login to admin panel\n[q] Quit"
 
 
 isNum :: String -> Bool
@@ -229,6 +229,114 @@ isNum xs  =
     _        -> False
 
 
+adminRunner :: Tables -> IO ()
+adminRunner tables = do
+                clearScreen
+                putStrLn "Choose the action:\n1. Book table\n2. Unbook table\n3. Init mounth\n[q] Logout"
+                choice <- getLine
+                case choice of
+                    "1" -> do
+                        clearScreen
+                        runner tables ChooseDay "" ""
+
+
+rWidget :: Tables -> State -> String -> String -> IO()
+rWidget tables widget _ _ = do
+          putStrLn $ roleWidget 
+          choice <- getLine
+          if choice == "2" then
+              adminRunner tables
+          else if choice == "1" then 
+              runner tables ChooseDay "" ""
+          else if choice == "q" then
+              die("Quiting...")
+          else
+              runner tables Role "" ""
+
+
+chDaysWidget :: Tables ->
+                State  ->
+                String ->
+                String ->
+                IO()
+chDaysWidget tables widget choice1 choice2 = do
+        let days = showDays tables 
+        clearScreen
+        putStrLn . dayWidget $ days 
+        choice <- getLine
+        if choice == "b" 
+            then runner tables Role "" "" 
+            else if choice == "q" 
+                then die("Quiting...")
+                else if isNum choice 
+                    then runner tables ChooseTime choice ""
+                    else do
+                        putStrLn "Invalid option"
+                        runner tables ChooseDay "" ""
+
+
+chTimeWidget :: Tables ->
+                State  ->
+                String ->
+                String ->
+                IO()
+chTimeWidget tables widget choice1 choice2 = do
+        let days = showDays tables
+            day = days !! ((read choice1) - 1)
+            dayTables = showDayTables tables day
+        clearScreen
+        putStrLn . timesWidget $ dayTables
+        choice <- getLine
+        if choice == "b" 
+            then runner tables ChooseDay "" "" 
+            else if choice == "q" 
+                then die("Quiting...")
+                else if isNum choice 
+                    then runner tables EditForm choice1 choice
+                    else do
+                        putStrLn "Invalid option"
+                        runner tables ChooseTime choice1 ""
+
+
+formWidget :: Tables ->
+              State  ->
+              String ->
+              String ->
+              IO()
+formWidget tables widget choice1 choice2 = do
+            let days = showDays tables
+                day = days !! ((read choice1) - 1)
+                dayTables = showDayTables tables day
+                bookTime = dayTables !! ((read choice2) - 1)        
+            putStrLn "Enter your name:"
+            name <- getLine
+            putStrLn "Enter your phone:"
+            phone <- getLine 
+            putStrLn "Enter number of persons:"
+            persons <- getLine
+            clearScreen
+            if not (isNum persons) then do
+                putStrLn "Persons should be number" 
+                runner tables EditForm choice1 choice2
+            else do
+                putStrLn ("Check your data:\n" ++ name ++ "\n" ++ 
+                          phone ++ "\n" ++ persons) 
+                putStrLn "Is it correct?[y]"
+                c <- getLine
+                if c /= "y" then
+                    runner tables EditForm choice1 choice2
+                else do 
+                    let kek = Just name 
+                        kek1 = Just phone
+                        kek2 = Just(read persons) 
+                        days2 = bookTable tables bookTime 7200 kek kek1 kek2
+                    putStr "You have successfuly booked the table on "
+                    putStrLn . show $ bookTime
+                    putStrLn . show $ days2 
+                    b <- getLine
+                    clearScreen
+                    runner days2 Role "" ""
+
 
 runner :: Tables -> 
           State -> 
@@ -239,62 +347,14 @@ runner tables widget choice1 choice2 = do
     case widget of
         Role -> do
             clearScreen
-            putStrLn $ roleWidget 
-            choice <- getLine
-            runner tables ChooseDay "" ""
+            rWidget tables widget "" ""
         ChooseDay -> do
-            let days = showDays tables 
-            clearScreen
-            putStrLn . dayWidget $ days 
-            choice <- getLine
-            if choice == "b" 
-                then runner tables ChooseDay "" "" 
-                else if choice == "q" 
-                    then die("Quiting...")
-                    else if isNum choice 
-                        then runner tables ChooseTime choice ""
-                        else do
-                            putStrLn "Invalid option"
-                            runner tables ChooseDay "" ""
+            chDaysWidget tables widget choice1 choice2
         ChooseTime -> do
-            let days = showDays tables
-                day = days !! ((read choice1) - 1)
-                dayTables = showDayTables tables day
-            clearScreen
-            putStrLn . timesWidget $ dayTables
-            choice <- getLine
-            if choice == "b" then
-                runner tables ChooseDay "" ""
-            else
-                runner tables EditForm choice1 choice
+            chTimeWidget tables widget choice1 choice2
         EditForm -> do 
-            let days = showDays tables
-                day = days !! ((read choice1) - 1)
-                dayTables = showDayTables tables day
-                bookTime = dayTables !! ((read choice2) - 1)        
-            putStrLn "Enter your name:"
-            name <- getLine
-            putStrLn "Enter your phone:"
-            phone <- getLine     
-            putStrLn "Enter number of persons:"
-            persons <- getLine
-            clearScreen
-            putStrLn ("Check your data:\n" ++ name ++ "\n" ++ 
-                      phone ++ "\n" ++ persons) 
-            c <- getLine
-            if c == "n" then
-                runner tables EditForm choice1 choice2
-            else do 
-                let kek = Just name 
-                    kek1 = Just phone
-                    kek2 = Just(read persons) 
-                    days2 = bookTable tables bookTime 7200 kek kek1 kek2
-                putStr "You have successfuly booked the table on "
-                putStrLn . show $ bookTime
-                putStrLn . show $ days2 
-                b <- getLine
-                clearScreen
-                runner days2 ChooseDay "" ""
+            formWidget tables widget choice1 choice2
+
 
 book :: IO()
 book = do
@@ -313,16 +373,5 @@ book = do
         persons = Just 2
         bookT = mkUTCTime currDay (10, 00, 0)
         day = initDays openT closeT [] interval tableNum days 
-        --res = bookTable day bookT interval name phone persons
-        --res2 = bookTable res bookT interval name phone2 persons 
-        --res3 = showDays day
-        --res4 = showDayTables day currTime  
     runner day Role "" ""    
-    -- putStrLn (numberList 1 res3)
-    -- putStrLn (numberList 1 (timeToString res4))
-    --putStrLn . show $ showFreeTimes day
-    --putStrLn . show $ showFreeTimes res2 
-    --putStrLn . show $ res2 
-    --putStrLn . show $ showFreeTimes res3 
-    --putStrLn . show $ res3 
 
