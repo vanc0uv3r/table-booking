@@ -250,6 +250,44 @@ saveTables tables = do
             let encoded = encode $ tables
             B.writeFile cnfName encoded
 
+unBookWidget :: Tables -> IO()
+unBookWidget tables = do
+             clearScreen
+             putStrLn $ enterPhoneMsg 
+             phone <- getLine
+             let newTables = unBookTable tables (Just phone)
+             saveTables newTables
+             adminRunner newTables 
+
+
+addDaysWidget :: Tables -> IO()
+addDaysWidget tables = do
+              clearScreen
+              putStrLn $ enterDaysMsg
+              days <- getLine
+              currTime <- getCurrentTime
+              let currDay = getLastDay $ tables 
+                  openT = mkUTCTime currDay openH
+                  closeT = mkUTCTime currDay closeH
+                  newTables = initDays openT closeT [] 
+                           interval tableNum (read days)
+              saveTables (tables ++ newTables)
+              adminRunner (tables ++ newTables) 
+
+
+initDaysWidget :: Tables -> IO()
+initDaysWidget tables = do
+               clearScreen
+               putStrLn $ enterDaysMsg
+               days <- getLine
+               currTime <- getCurrentTime
+               let currDay = toGregorian $ utctDay currTime 
+                   openT = mkUTCTime currDay openH
+                   closeT = mkUTCTime currDay closeH
+                   newTables = initDays openT closeT [] 
+                          interval tableNum (read days)
+               saveTables newTables
+               adminRunner newTables
 
 
 adminRunner :: Tables -> IO ()
@@ -262,36 +300,11 @@ adminRunner tables = do
                     clearScreen
                     runner tables ChooseDay "" "" True
                 "2" -> do
-                    clearScreen
-                    putStrLn "Enter phone of person:\n"
-                    phone <- getLine
-                    let newTables = unBookTable tables (Just phone)
-                    saveTables newTables
-                    adminRunner newTables 
+                    unBookWidget tables
                 "3" -> do
-                    clearScreen
-                    putStrLn "Enter number of days:\n"
-                    days <- getLine
-                    currTime <- getCurrentTime
-                    let currDay = toGregorian $ utctDay currTime 
-                        openT = mkUTCTime currDay openH
-                        closeT = mkUTCTime currDay closeH
-                        newTables = initDays openT closeT [] 
-                                  interval tableNum (read days)
-                    saveTables newTables
-                    adminRunner newTables
+                    initDaysWidget tables
                 "4" -> do
-                    clearScreen
-                    putStrLn "Enter number of days:\n"
-                    days <- getLine
-                    currTime <- getCurrentTime
-                    let currDay = getLastDay $ tables 
-                        openT = mkUTCTime currDay openH
-                        closeT = mkUTCTime currDay closeH
-                        newTables = initDays openT closeT [] 
-                                  interval tableNum (read days)
-                    saveTables (tables ++ newTables)
-                    adminRunner (tables ++ newTables) 
+                    addDaysWidget tables
                 "q" -> die(quitMsg)
                 otherwise -> adminRunner tables
 
@@ -326,7 +339,7 @@ chDaysWidget tables widget choice1 choice2 ret = do
             dLen = length days
         clearScreen
         if dLen == 0 then do
-            putStrLn "No availible days. Press any key\n"
+            putStrLn $ noDaysMsg
             c <- getLine
             if ret then 
                 adminRunner tables

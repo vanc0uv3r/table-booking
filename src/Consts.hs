@@ -17,6 +17,9 @@ module Consts
        roleMsg,
        lastPicksMsg,
        checkDataMsg,
+       enterPhoneMsg,
+       enterDaysMsg,
+       noDaysMsg
      ) where
 
 oneM = 60
@@ -55,3 +58,9 @@ roleMsg = "Welcome to table booking system\n1.Book a table\n" ++
 lastPicksMsg = "\n[b]. Go back\n[q].Quit"
 
 checkDataMsg = "Check your data:\n"
+
+enterPhoneMsg = "Enter phone of person:\n"
+
+enterDaysMsg = "Enter number of days:\n"
+
+noDaysMsg = "No availible days. Press any key\n"
