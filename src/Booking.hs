@@ -132,11 +132,14 @@ showBookTimes times = nub res
         res = map (\x -> time x) . filter(not . isFree) $ times
 
 
+--Returns Last element of non empty Table list
 getLastDay :: Tables -> (Integer, Int, Int) 
 getLastDay tables = toGregorian $ utctDay lastTime where
                     lastTime = addUTCTime (realToFrac oneD) 
                                           (time (last tables)) 
 
+
+--Returns List of free tables of choosen day 
 showDayTables :: Tables ->
                  Day ->
                  Times 
@@ -147,10 +150,12 @@ showDayTables tables day = res2
         res2 = nub (map (\tab -> time $ tab) res)
 
 
+--Returns list of strings of times 
 timeToString :: Times -> [String]
 timeToString times = map (formatTime defaultTimeLocale "%H:%M") times 
 
 
+--Returns List of free days
 showDays :: Tables ->
             [Day] 
 showDays tables = res
@@ -215,22 +220,26 @@ helper tables (x:xs) book_ name_ phone_ persons_ =
                                                     persons = persons_}
 
 
+-- Makes numbered list started with n
 numberList :: Show a => Int -> [a] -> String
 numberList _ [] = ""
 numberList num (x:xs) = "\n" ++ show num ++ ". " ++ show x ++ 
                         numberList (num+1) xs
 
 
+-- Render list of days
 dayWidget :: [Day] -> String
 dayWidget tables = chDayMsg ++ res ++ lastPicksMsg
     where res = numberList 1 tables 
 
 
+-- Render list of Times
 timesWidget :: Times -> String
 timesWidget tables = chTimeMsg ++ res ++ lastPicksMsg 
     where res = numberList 1 (timeToString tables) 
 
 
+-- Checks if string is numeric only
 isNum :: String -> Bool
 isNum ""  = False
 isNum "." = False
@@ -241,18 +250,22 @@ isNum xs  =
     _        -> False
 
 
+
+-- Check if current phone in database
 phoneExists :: Tables -> Phone -> Bool
 phoneExists tables ph = case (find (\tab -> phone tab == ph) tables) of
                      Just a -> True
                      Nothing -> False
 
 
+-- Saves list of tables into file
 saveTables :: Tables -> IO()
 saveTables tables = do
             let encoded = encode $ tables
             B.writeFile cnfName encoded
 
 
+-- Render unbook interface (prompt to phone number)
 unBookWidget :: Tables -> IO()
 unBookWidget tables = do
              clearScreen
@@ -268,6 +281,7 @@ unBookWidget tables = do
                 unBookWidget tables
 
 
+-- Render addDays interface (prompt to days number)
 addDaysWidget :: Tables -> IO()
 addDaysWidget tables = do
               clearScreen
@@ -289,6 +303,7 @@ addDaysWidget tables = do
                   addDaysWidget tables
 
 
+-- Render initDays interface (prompt to days number)
 initDaysWidget :: Tables -> IO()
 initDaysWidget tables = do
                clearScreen
@@ -310,10 +325,12 @@ initDaysWidget tables = do
                    initDaysWidget tables 
 
 
+-- Checks admin password
 loginAdmin :: String -> Bool
 loginAdmin our_pass = our_pass == password
 
 
+-- Handle action in admin panel and then proccess it
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
             clearScreen
@@ -335,6 +352,7 @@ adminRunner tables = do
                 otherwise -> adminRunner tables
 
 
+-- Render choice of action (log in or book as a usual user)
 rWidget :: Tables   -> 
            State    -> 
            LastInput   -> 
@@ -361,6 +379,7 @@ rWidget tables widget _ _ ret = do
               runner tables Role Nothing Nothing ret
   
   
+-- Render interface of choosing day to book
 chDaysWidget :: Tables   ->
                 State    ->
                 LastInput   ->
@@ -396,6 +415,7 @@ chDaysWidget tables widget choice1 choice2 ret = do
                 runner tables ChooseDay Nothing Nothing ret
 
 
+-- Render interface of choosing time to book
 chTimeWidget :: Tables   ->
                 State    ->
                 LastInput   ->
@@ -433,6 +453,7 @@ chTimeWidget tables widget choice1 choice2 ret = do
                 runner tables ChooseTime choice1 Nothing ret
 
 
+-- Renders form to fill for booking table 
 formWidget :: Tables   ->
               State    ->
               LastInput   ->
@@ -485,6 +506,7 @@ formWidget tables widget choice1 choice2 ret = do
                         runner days2 Role Nothing Nothing ret
 
 
+-- Handle menu action and then proccess it 
 runner :: Tables   ->
           State    -> 
           LastInput -> 
