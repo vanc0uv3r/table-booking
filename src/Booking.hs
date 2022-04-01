@@ -14,13 +14,11 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as BS
 import GHC.Generics
 import Data.Time
-import Data.Maybe
+import Data.Maybe()
 import Data.Fixed
 import Data.List
-import Debug.Trace
 import Control.Lens
 import System.Console.ANSI
-import Debug.Trace
 import System.Exit
 import Data.Char
 
@@ -33,8 +31,6 @@ data State =
     | ChooseDay 
     | ChooseTime
     | EditForm
-
-data Actions = Back | Quit
 
 
 type Tables = [Table]
@@ -51,6 +47,12 @@ type OpenTime = UTCTime
 type CloseTime = UTCTime
 type ToReturn = Bool
 
+
+minDays :: Integer
+maxDays :: Integer
+
+minDays = 0
+maxDays = 100
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
@@ -69,9 +71,9 @@ instance ToJSON Table
 mkUTCTime :: (Integer, Int, Int)
           -> (Int, Int, Pico)
           -> UTCTime
-mkUTCTime (year, mon, day) (hour, min, sec) =
+mkUTCTime (year, mon, day) (hour, mins, sec) =
   UTCTime (fromGregorian year mon day)
-          (timeOfDayToTime (TimeOfDay hour min sec))
+          (timeOfDayToTime (TimeOfDay hour mins sec))
 
 
 -- get open time, close time, list of tables, interval, number of tables, 
@@ -83,12 +85,12 @@ initDays :: OpenTime ->
             TablesNum -> 
             DaysNum ->
             Tables 
-initDays openT closeT times interval numT days =
+initDays openT closeT times intervl numT days =
     if days > 0 then  
-        day ++ initDays newOpenT newCloseT times interval numT (days-1)
+        day ++ initDays newOpenT newCloseT times intervl numT (days-1)
     else []
     where
-        day = initTimes openT closeT [] interval numT
+        day = initTimes openT closeT [] intervl numT
         newOpenT = addUTCTime (realToFrac oneD) openT
         newCloseT = addUTCTime (realToFrac oneD) closeT 
 
@@ -101,35 +103,22 @@ initTimes :: OpenTime ->
              Interval -> 
              TablesNum -> 
              Tables 
-initTimes openT closeT times interval numT = 
-    if diffUTCTime closeT openT >= realToFrac interval then
-        time ++ initTimes newOpenT closeT times interval numT 
+initTimes openT closeT times intervl numT = 
+    if diffUTCTime closeT openT >= realToFrac intervl then
+        nowTime ++ initTimes newOpenT closeT times intervl numT 
     else []
     where
-        time = initTables numT openT
-        newOpenT = addUTCTime (realToFrac interval) openT
+        nowTime = initTables numT openT
+        newOpenT = addUTCTime (realToFrac intervl) openT
 
 
 -- Gets number of table and table time and returns list of 
 -- equal structures(Table) 
 initTables :: TablesNum -> UTCTime -> [Table]
 initTables 0 _ = [] 
-initTables n time = table : initTables (n-1) time where
-    table = Table time True Nothing Nothing Nothing 
+initTables n currTime = table : initTables (n-1) currTime where
+    table = Table currTime True Nothing Nothing Nothing 
 
-
---Gets list of tables and returns list of UTCTime where isFree==True
-showFreeTimes :: Tables -> Times 
-showFreeTimes times = nub res
-    where
-        res = map (time) . filter(isFree) $ times
-
-
---Gets list of tables and returns list of UTCTime where isFree==False
-showBookTimes :: Tables -> Times 
-showBookTimes times = nub res
-    where
-        res = map (\x -> time x) . filter(not . isFree) $ times
 
 
 --Returns Last element of non empty Table list
@@ -173,16 +162,17 @@ bookTable :: Tables ->
              Phone ->
              Persons ->
              Tables 
-bookTable tables bookT interval name phone persons  = 
+bookTable tables bookT intervl currName currPhone currPersons  = 
     newTables where
         reserveSlots = filter(\x -> bookT <= time x 
                 && isFree x 
-                && (addUTCTime (realToFrac interval) bookT) > time x) tables
+                && (addUTCTime (realToFrac intervl) bookT) > time x) tables
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
                                  time table == time_ &&
                                  isFree table) tables) !! 0) times 
-        newTables = helper tables indexes False name phone persons
+        newTables = helper tables indexes False currName 
+                            currPhone currPersons
         
 
 
@@ -218,6 +208,7 @@ helper tables (x:xs) book_ name_ phone_ persons_ =
                                                     name = name_, 
                                                     phone = phone_, 
                                                     persons = persons_}
+helper _ _ _ _ _ _ = [] 
 
 
 -- Makes numbered list started with n
@@ -254,7 +245,7 @@ isNum xs  =
 -- Check if current phone in database
 phoneExists :: Tables -> Phone -> Bool
 phoneExists tables ph = case (find (\tab -> phone tab == ph) tables) of
-                     Just a -> True
+                     Just _ -> True
                      Nothing -> False
 
 
@@ -270,11 +261,11 @@ unBookWidget :: Tables -> IO()
 unBookWidget tables = do
              clearScreen
              putStrLn $ enterPhoneMsg 
-             phone <- getLine
-             if phone == "b" then
+             currPhone <- getLine
+             if currPhone == "b" then
                  adminRunner tables
-             else if (phoneExists tables (Just phone)) then do 
-                let newTables = unBookTable tables (Just phone)
+             else if (phoneExists tables (Just currPhone)) then do 
+                let newTables = unBookTable tables (Just currPhone)
                 saveTables newTables
                 adminRunner newTables
              else
@@ -289,9 +280,8 @@ addDaysWidget tables = do
               days <- getLine
               if days == "b" then
                  adminRunner tables
-              else if isNum days && (read days) > 0 
-                      && (read days) < 100 then do
-                  currTime <- getCurrentTime
+              else if isNum days && (read days) > minDays 
+                      && (read days) < maxDays then do
                   let currDay = getLastDay $ tables 
                       openT = mkUTCTime currDay openH
                       closeT = mkUTCTime currDay closeH
@@ -311,8 +301,8 @@ initDaysWidget tables = do
                days <- getLine
                if days == "b" then
                    adminRunner tables
-               else if isNum days && (read days) > 0 
-                      && (read days) < 100 then do
+               else if isNum days && (read days) > minDays 
+                      && (read days) < maxDays then do
                    currTime <- getCurrentTime
                    let currDay = toGregorian $ utctDay currTime 
                        openT = mkUTCTime currDay openH
@@ -326,8 +316,6 @@ initDaysWidget tables = do
 
 showTodayBooking :: Tables -> IO()
 showTodayBooking tables = do
-            currTime <- getCurrentTime
-            let currDay = utctDay currTime 
             let booked = filter (\tab -> not (isFree tab)) tables
                 bookedStr = showBookedList 1 booked
             putStrLn bookedStr 
@@ -336,8 +324,8 @@ showTodayBooking tables = do
 
 showBookedList :: Int -> Tables -> String
 showBookedList _ [] = ""
-showBookedList num (x:xs) = "\n" ++ show num ++ ". " ++ show (time x) ++ " " ++
-                            n ++ " " ++ p ++ 
+showBookedList num (x:xs) = "\n" ++ show num ++ ". " ++ show (time x) 
+                    ++ " " ++ n ++ " " ++ p ++ 
                         showBookedList (num+1) xs where
                         n = case (name x) of 
                             Just a -> a
@@ -372,11 +360,11 @@ adminRunner tables = do
                 "5" -> do 
                         showTodayBooking tables
                         putStrLn $ contMsg
-                        c <- getLine
+                        _ <- getLine
                         adminRunner tables
                 "q" -> die(quitMsg)
                 "l" -> runner tables Role Nothing Nothing False
-                otherwise -> adminRunner tables
+                _ -> adminRunner tables
 
 
 -- Render choice of action (log in or book as a usual user)
@@ -386,7 +374,7 @@ rWidget :: Tables   ->
            LastInput   -> 
            ToReturn ->
            IO()
-rWidget tables widget _ _ ret = do
+rWidget tables _ _ _ ret = do
           putStrLn $ roleMsg 
           choice <- getLine
           if choice == "2" then do
@@ -413,13 +401,13 @@ chDaysWidget :: Tables   ->
                 LastInput   ->
                 ToReturn ->
                 IO()
-chDaysWidget tables widget choice1 choice2 ret = do
+chDaysWidget tables _ _ _ ret = do
         let days = showDays tables
             dLen = length days
         clearScreen
         if dLen == 0 then do
             putStrLn $ noDaysMsg
-            c <- getLine
+            _ <- getLine
             if ret then 
                 adminRunner tables
             else
@@ -435,7 +423,7 @@ chDaysWidget tables widget choice1 choice2 ret = do
              else if choice == "q" then
                 die(quitMsg)
              else if isNum choice && (read choice) <= dLen
-                             && (read choice) > 0 then 
+                             && (read choice) > minDays then 
                   runner tables ChooseTime (Just choice) Nothing ret
              else do
                 putStrLn $ invOptMsh 
@@ -449,7 +437,7 @@ chTimeWidget :: Tables   ->
                 LastInput   ->
                 ToReturn ->
                 IO()
-chTimeWidget tables widget choice1 choice2 ret = do
+chTimeWidget tables _ choice1 _ ret = do
         let days = showDays tables
             day = days !! (ch - 1) where
                 ch = case choice1 of
@@ -459,7 +447,7 @@ chTimeWidget tables widget choice1 choice2 ret = do
             dLen = length dayTables
         if dLen == 0 then do
             putStrLn $ noDaysMsg
-            c <- getLine
+            _ <- getLine
             if ret then 
                 adminRunner tables
             else
@@ -473,7 +461,7 @@ chTimeWidget tables widget choice1 choice2 ret = do
             else if choice == "q" then 
                 die(quitMsg)
             else if isNum choice && (read choice) <= dLen
-                             && (read choice) > 0 then 
+                             && (read choice) > minDays then 
                 runner tables EditForm choice1 (Just choice) ret
             else do
                 putStrLn $ invOptMsh 
@@ -487,7 +475,7 @@ formWidget :: Tables   ->
               LastInput   ->
               ToReturn ->
               IO()
-formWidget tables widget choice1 choice2 ret = do
+formWidget tables _ choice1 choice2 ret = do
             let days = showDays tables
                 day = days !! (ch - 1) where
                     ch = case choice1 of
@@ -499,36 +487,37 @@ formWidget tables widget choice1 choice2 ret = do
                         Just a -> (read a)
                         Nothing -> 0
             putStrLn $ nameMsg
-            name <- getLine
+            currName <- getLine
             putStrLn $ phoneMsg
-            phone <- getLine 
+            currPhone <- getLine 
             putStrLn $ personsMsg 
-            persons <- getLine
+            currPersons <- getLine
             clearScreen
-            if not (isNum persons) then do
+            if not (isNum currPersons) then do
                 putStrLn $ personsErrMsg 
                 runner tables EditForm choice1 choice2 ret
-            else if not (isNum phone) then do
+            else if not (isNum currPhone) then do
                 putStrLn $ phoneErrMsg 
                 runner tables EditForm choice1 choice2 ret
-            else if (phoneExists tables (Just phone)) then do
+            else if (phoneExists tables (Just currPhone)) then do
                 putStrLn $ uniquePhoneMsg 
                 runner tables EditForm choice1 choice2 ret
             else do
-                putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" 
-                                                        ++ persons
+                putStrLn $ checkDataMsg ++ currName ++ "\n" ++ currPhone 
+                                        ++ "\n" ++ currPersons
                 putStrLn $ correctMsg 
                 c <- getLine
                 if c /= "y" then
                     runner tables EditForm choice1 choice2 ret
                 else do 
                     let days2 = bookTable tables bookTime bookInterval 
-                               (Just name) (Just phone) (Just(read persons))
+                               (Just currName) (Just currPhone) 
+                               (Just(read currPersons))
                     saveTables days2 
                     putStr $ successMsg 
                     putStrLn . show $ bookTime
                     putStrLn $ contMsg
-                    t <- getLine
+                    _ <- getLine
                     if ret then
                         adminRunner days2
                     else
@@ -563,10 +552,8 @@ book = do
     if not fileExist then
          writeFile cnfName ""
     else return ()
-    currTime <- getCurrentTime
     contents <- BS.readFile cnfName 
-    let currDay = toGregorian $ utctDay currTime 
-        loadedTables = decodeStrict contents :: Maybe Tables 
+    let loadedTables = decodeStrict contents :: Maybe Tables 
         tables = case loadedTables of
               Just a -> a
               Nothing -> []

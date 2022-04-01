@@ -32,6 +32,7 @@ library
       Paths_table_booking
   hs-source-dirs:
       src
+  ghc-options: -Wall -Werror
   build-depends:
       aeson
     , ansi-terminal

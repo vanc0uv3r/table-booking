@@ -32,6 +32,33 @@ oneM = 60
 oneH = oneM * 60
 oneD = 24 * oneH
 
+oneM :: Int
+oneH :: Int
+oneD :: Int 
+nameMsg :: String
+phoneMsg :: String
+personsMsg :: String
+correctMsg :: String
+personsErrMsg :: String
+successMsg :: String
+quitMsg :: String
+chDayMsg :: String
+chTimeMsg :: String
+invOptMsh :: String
+rWidgetMsg :: String
+adminMsg :: String
+roleMsg :: String
+lastPicksMsg :: String
+checkDataMsg :: String
+enterPhoneMsg :: String
+enterDaysMsg :: String
+noDaysMsg :: String
+passMsg :: String
+wrongPassMsg :: String
+phoneErrMsg :: String
+uniquePhoneMsg :: String
+contMsg :: String
+
 nameMsg = "Enter your name:"
 
 phoneMsg = "Enter your phone:"

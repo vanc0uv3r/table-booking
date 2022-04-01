@@ -27,8 +27,18 @@ h2 = 22
 m2 = 0
 s2 = 0
 
+openH :: (Int, Int, Pico)
+closeH :: (Int, Int, Pico)
+
 openH = (h1, m1, s1)
 closeH = (h2, m2, s2)
+
+interval :: Integer
+tableNum :: Integer
+bookInterval :: Integer
+
+password :: String
+cnfName :: String 
 
 interval = 3600
 tableNum = 1

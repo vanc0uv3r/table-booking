@@ -33,6 +33,9 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
+  - -Werror
 
 executables:
   table-booking-exe:
@@ -55,3 +58,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - table-booking
+
