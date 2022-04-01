@@ -179,19 +179,21 @@ bookTable tables bookT interval name phone persons  =
 -- Gets list of tables, time of booked table, phone
 -- returns updated list with unbooked table
 unBookTable :: Tables ->
-               Interval -> 
-               OpenTime -> 
+            --   Interval -> 
+            --   OpenTime -> 
                Phone -> 
                Tables
-unBookTable tables interval bookT phone_ = 
+unBookTable tables phone_ = 
     newTables where
-         reserveSlots = filter(\x -> bookT <= time x &&
-                   (addUTCTime (realToFrac interval) bookT) > time x) tables
-         times = nub (map (\x -> time x) reserveSlots)
-         indexes = map (\time_ -> (findIndices(\table ->
-                                  time table == time_ &&
-                                  not (isFree table) &&
-                                  phone table == phone_) tables) !! 0) times
+         --reserveSlots = filter(\x -> bookT <= time x &&
+         --          (addUTCTime (realToFrac interval) bookT) > time x) tables
+         --times = nub (map (\x -> time x) reserveSlots)
+         indexes = findIndices(\table ->
+                              phone table == phone_) tables
+         --indexes = map (\time_ -> (findIndices(\table ->
+         --                         time table == time_ &&
+         --                         not (isFree table) &&
+         --                         phone table == phone_) tables) 
          newTables = helper tables indexes True Nothing Nothing Nothing 
 
 
@@ -261,6 +263,11 @@ adminRunner tables = do
                     runner tables ChooseDay "" "" True
                 "2" -> do
                     clearScreen
+                    putStrLn "Enter phone of person:\n"
+                    phone <- getLine
+                    let newTables = unBookTable tables (Just phone)
+                    saveTables newTables
+                    adminRunner newTables 
                 "3" -> do
                     clearScreen
                     putStrLn "Enter number of days:\n"
