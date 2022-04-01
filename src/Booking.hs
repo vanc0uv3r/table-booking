@@ -240,7 +240,7 @@ isNum xs  =
 
 
 phoneExists :: Tables -> Phone -> Bool
-phoneExists tables phone_ = case (find (\tab -> phone tab == phone_) tables) of
+phoneExists tables ph = case (find (\tab -> phone tab == ph) tables) of
                      Just a -> True
                      Nothing -> False
 
@@ -457,6 +457,12 @@ formWidget tables widget choice1 choice2 ret = do
             clearScreen
             if not (isNum persons) then do
                 putStrLn $ personsErrMsg 
+                runner tables EditForm choice1 choice2 ret
+            else if not (isNum phone) then do
+                putStrLn $ phoneErrMsg 
+                runner tables EditForm choice1 choice2 ret
+            else if (phoneExists tables (Just phone)) then do
+                putStrLn $ uniquePhoneMsg 
                 runner tables EditForm choice1 choice2 ret
             else do
                 putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" 

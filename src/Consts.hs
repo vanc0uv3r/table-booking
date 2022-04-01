@@ -23,6 +23,8 @@ module Consts
        noDaysMsg,
        passMsg,
        wrongPassMsg,
+       phoneErrMsg,
+       uniquePhoneMsg
      ) where
 
 oneM = 60
@@ -63,11 +65,14 @@ lastPicksMsg = "\n[b]. Go back\n[q].Quit"
 
 checkDataMsg = "Check your data:\n"
 
+phoneErrMsg = "Phone must be a number"
 enterPhoneMsg = "Enter phone of person:\n"
 
 enterDaysMsg = "Enter number of days:\n"
 
 passMsg = "Enter the password for admin:\n"
+
+uniquePhoneMsg = "This phone number already exists in database"
 
 wrongPassMsg = "Wrong password!\n"
 noDaysMsg = "No availible days. Press any key\n"
