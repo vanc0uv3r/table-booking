@@ -28,6 +28,8 @@ dependencies:
 - ansi-terminal
 - bytestring
 - aeson
+- directory
+
 
 library:
   source-dirs: src

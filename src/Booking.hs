@@ -6,6 +6,8 @@ module Booking
         book
     ) where 
 
+
+import System.Directory
 import System.IO
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
@@ -506,6 +508,10 @@ book :: IO()
 book = do
     hSetBuffering stdout NoBuffering 
     clearScreen
+    fileExist <- doesFileExist cnfName
+    if not fileExist then
+         writeFile cnfName ""
+    else return ()
     currTime <- getCurrentTime
     contents <- BS.readFile cnfName 
     let currDay = toGregorian $ utctDay currTime 

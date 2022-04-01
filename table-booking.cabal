@@ -28,7 +28,6 @@ library
       Booking
       Config
       Consts
-      Lib
   other-modules:
       Paths_table_booking
   hs-source-dirs:
@@ -39,6 +38,7 @@ library
     , base >=4.7 && <5
     , brick
     , bytestring
+    , directory
     , lens
     , time
     , vty
@@ -57,6 +57,7 @@ executable table-booking-exe
     , base >=4.7 && <5
     , brick
     , bytestring
+    , directory
     , lens
     , table-booking
     , time
@@ -77,6 +78,7 @@ test-suite table-booking-test
     , base >=4.7 && <5
     , brick
     , bytestring
+    , directory
     , lens
     , table-booking
     , time
