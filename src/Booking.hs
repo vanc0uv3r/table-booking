@@ -324,6 +324,29 @@ initDaysWidget tables = do
                else
                    initDaysWidget tables 
 
+showTodayBooking :: Tables -> IO()
+showTodayBooking tables = do
+            currTime <- getCurrentTime
+            let currDay = utctDay currTime 
+            let booked = filter (\tab -> not (isFree tab) 
+                         && currDay == (utctDay $ (time tab))) tables
+                bookedStr = showBookedList 1 booked
+            putStrLn bookedStr 
+            
+
+
+showBookedList :: Int -> Tables -> String
+showBookedList _ [] = ""
+showBookedList num (x:xs) = "\n" ++ show num ++ ". " ++ show (time x) ++ " " ++
+                            n ++ " " ++ p ++ 
+                        showBookedList (num+1) xs where
+                        n = case (name x) of 
+                            Just a -> a
+                            _ -> ""
+                        p = case (phone x) of
+                            Just a -> a
+                            _ -> ""
+
 
 -- Checks admin password
 loginAdmin :: String -> Bool
@@ -347,6 +370,11 @@ adminRunner tables = do
                         initDaysWidget tables
                     else
                         addDaysWidget tables
+                "5" -> do 
+                        showTodayBooking tables
+                        putStrLn $ contMsg
+                        c <- getLine
+                        adminRunner tables
                 "q" -> die(quitMsg)
                 "l" -> runner tables Role Nothing Nothing False
                 otherwise -> adminRunner tables
@@ -500,6 +528,7 @@ formWidget tables widget choice1 choice2 ret = do
                     saveTables days2 
                     putStr $ successMsg 
                     putStrLn . show $ bookTime
+                    putStrLn $ contMsg
                     t <- getLine
                     if ret then
                         adminRunner days2
