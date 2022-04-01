@@ -2,6 +2,7 @@ module Consts
     (
        oneM,
        oneH,
+       oneD,
        nameMsg,
        phoneMsg,
        personsMsg,
@@ -24,6 +25,7 @@ module Consts
 
 oneM = 60
 oneH = oneM * 60
+oneD = 24 * oneH
 
 nameMsg = "Enter your name:"
 
