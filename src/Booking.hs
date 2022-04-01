@@ -307,6 +307,11 @@ initDaysWidget tables = do
                else
                    initDaysWidget tables 
 
+
+loginAdmin :: String -> Bool
+loginAdmin our_pass = our_pass == password
+
+
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
             clearScreen
@@ -316,16 +321,15 @@ adminRunner tables = do
                 "1" -> do
                     clearScreen
                     runner tables ChooseDay Nothing Nothing True
-                "2" -> do
-                    unBookWidget tables
-                "3" -> do
-                    initDaysWidget tables
+                "2" -> unBookWidget tables
+                "3" -> initDaysWidget tables
                 "4" -> do
                     if (length tables) == 0 then
                         initDaysWidget tables
                     else
                         addDaysWidget tables
                 "q" -> die(quitMsg)
+                "l" -> runner tables Role Nothing Nothing False
                 otherwise -> adminRunner tables
 
 
@@ -338,8 +342,15 @@ rWidget :: Tables   ->
 rWidget tables widget _ _ ret = do
           putStrLn $ roleMsg 
           choice <- getLine
-          if choice == "2" then
-              adminRunner tables
+          if choice == "2" then do
+              clearScreen
+              putStr $ passMsg
+              pass <- getLine
+              if (loginAdmin pass) then
+                 adminRunner tables
+              else do
+                 putStrLn $ wrongPassMsg 
+                 rWidget tables Role Nothing Nothing False
           else if choice == "1" then 
               runner tables ChooseDay Nothing Nothing ret
           else if choice == "q" then
