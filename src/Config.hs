@@ -6,6 +6,7 @@ module Config
         tableNum,
         bookInterval,
         cnfName,
+        password
     ) where
 
 import Data.Fixed
@@ -33,4 +34,5 @@ interval = 3600
 tableNum = 1
 bookInterval = 7200
 
+password = "pass"
 cnfName = "tables.txt"
