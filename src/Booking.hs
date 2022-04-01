@@ -22,24 +22,27 @@ import Debug.Trace
 import System.Exit
 import Data.Char
 
+import Consts
+import Config
+
+
 data State =
       Role
     | ChooseDay 
     | ChooseTime
     | EditForm
 
-oneM = 60
-oneH = oneM * 60
 
 type Tables = [Table]
 type Times = [UTCTime]
+type Choice = String
 type Name = Maybe String
 type Phone = Maybe String
 type Persons = Maybe Int 
-type Interval = Int
+type Interval = Integer
 type Indexes = [Int]
-type TablesNum = Int
-type DaysNum = Int
+type TablesNum = Integer
+type DaysNum = Integer
 type OpenTime = UTCTime
 type CloseTime = UTCTime
 
@@ -49,6 +52,7 @@ data Table = Table {time :: UTCTime,
                     phone :: Maybe String,
                     persons :: Maybe Int 
 } deriving (Show, Generic)
+
 
 
 instance FromJSON Table 
@@ -136,7 +140,6 @@ timeToString :: Times -> [String]
 timeToString times = map (formatTime defaultTimeLocale "%H:%M") times 
 
 
-
 showDays :: Tables ->
             [Day] 
 showDays tables = res
@@ -214,20 +217,13 @@ numberList num (x:xs) = "\n" ++ show num ++ ". " ++ show x ++
 
 
 dayWidget :: [Day] -> String
-dayWidget tables = tmp ++ res ++ "\n[b].Go back\n[q].Quit"
+dayWidget tables = chDayMsg ++ res ++ lastPicksMsg
     where res = numberList 1 tables 
-          tmp = "Choose the day" 
 
 
 timesWidget :: Times -> String
-timesWidget tables = tmp ++ res ++ "\n[b]. Go back\n[q].Quit"
+timesWidget tables = chTimeMsg ++ res ++ lastPicksMsg 
     where res = numberList 1 (timeToString tables) 
-          tmp = "Choose the time book" 
-
-
-roleWidget :: String
-roleWidget = "Welcome to table booking system\n1.Book a table\n" ++
-             "2.Login to admin panel\n[q] Quit"
 
 
 isNum :: String -> Bool
@@ -243,7 +239,7 @@ isNum xs  =
 saveTables :: Tables -> IO()
 saveTables tables = do
             let encoded = encode $ tables
-            B.writeFile "kek.txt" encoded
+            B.writeFile cnfName encoded
 
 --adminUnbook :: Tables -> IO()
 --adminUnbook tables = do
@@ -253,7 +249,7 @@ saveTables tables = do
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
             clearScreen
-            putStrLn "Choose the action:\n1. Book table\n2. Unbook table\n3. Init mounth\n[q] Logout"
+            putStrLn $  adminMsg 
             choice <- getLine
             case choice of
                 "1" -> do
@@ -263,14 +259,14 @@ adminRunner tables = do
 
 rWidget :: Tables -> State -> String -> String -> IO()
 rWidget tables widget _ _ = do
-          putStrLn $ roleWidget 
+          putStrLn $ roleMsg 
           choice <- getLine
           if choice == "2" then
               adminRunner tables
           else if choice == "1" then 
               runner tables ChooseDay "" ""
           else if choice == "q" then
-              die("Quiting...")
+              die(quitMsg)
           else
               runner tables Role "" ""
 
@@ -288,11 +284,11 @@ chDaysWidget tables widget choice1 choice2 = do
         if choice == "b" then
              runner tables Role "" "" 
         else if choice == "q" then
-             die("Quiting...")
+             die(quitMsg)
         else if isNum choice then 
              runner tables ChooseTime choice ""
         else do
-             putStrLn "Invalid option"
+             putStrLn $ invOptMsh 
              runner tables ChooseDay "" ""
 
 
@@ -311,11 +307,11 @@ chTimeWidget tables widget choice1 choice2 = do
         if choice == "b" then 
             runner tables ChooseDay "" "" 
         else if choice == "q" then 
-            die("Quiting...")
+            die(quitMsg)
         else if isNum choice then 
             runner tables EditForm choice1 choice
         else do
-            putStrLn "Invalid option"
+            putStrLn $ invOptMsh 
             runner tables ChooseTime choice1 ""
 
 
@@ -329,27 +325,27 @@ formWidget tables widget choice1 choice2 = do
                 day = days !! ((read choice1) - 1)
                 dayTables = showDayTables tables day
                 bookTime = dayTables !! ((read choice2) - 1)        
-            putStrLn "Enter your name:"
+            putStrLn $ nameMsg
             name <- getLine
-            putStrLn "Enter your phone:"
+            putStrLn $ phoneMsg
             phone <- getLine 
-            putStrLn "Enter number of persons:"
+            putStrLn $ personsMsg 
             persons <- getLine
             clearScreen
             if not (isNum persons) then do
-                putStrLn "Persons should be number" 
+                putStrLn $ personsErrMsg 
                 runner tables EditForm choice1 choice2
             else do
-                putStrLn ("Check your data:\n" ++ name ++ "\n" ++ 
-                          phone ++ "\n" ++ persons) 
-                putStrLn "Is it correct?[y]"
+                putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" ++ persons
+                putStrLn $ correctMsg 
                 c <- getLine
                 if c /= "y" then
                     runner tables EditForm choice1 choice2
                 else do 
-                    let days2 = bookTable tables bookTime 7200 (Just name)  (Just phone) (Just(read persons))
+                    let days2 = bookTable tables bookTime bookInterval 
+                                (Just name) (Just phone) (Just(read persons))
                     saveTables days2 
-                    putStr "You have successfuly booked the table on "
+                    putStr $ successMsg 
                     putStrLn . show $ bookTime
 
 
@@ -376,18 +372,11 @@ book = do
     hSetBuffering stdout NoBuffering 
     clearScreen
     currTime <- getCurrentTime
-    contents <- BS.readFile "kek.txt"
+    contents <- BS.readFile cnfName 
     let currDay = toGregorian $ utctDay currTime 
-        openT = mkUTCTime currDay (10, 0, 0)
-        closeT = mkUTCTime currDay (22, 0, 0)
-        interval = 3600 
-        tableNum = 1 
+        openT = mkUTCTime currDay openH
+        closeT = mkUTCTime currDay closeH
         days = 1 
-        name = Just "Ivan"
-        phone = Just "777"
-        phone2 = Just "888"
-        persons = Just 2
-        bookT = mkUTCTime currDay (10, 00, 0)
         day = initDays openT closeT [] interval tableNum days 
         lol = decodeStrict contents :: Maybe Tables 
     putStrLn . show $ lol 
