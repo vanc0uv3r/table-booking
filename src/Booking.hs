@@ -328,8 +328,7 @@ showTodayBooking :: Tables -> IO()
 showTodayBooking tables = do
             currTime <- getCurrentTime
             let currDay = utctDay currTime 
-            let booked = filter (\tab -> not (isFree tab) 
-                         && currDay == (utctDay $ (time tab))) tables
+            let booked = filter (\tab -> not (isFree tab)) tables
                 bookedStr = showBookedList 1 booked
             putStrLn bookedStr 
             
