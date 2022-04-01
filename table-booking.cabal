@@ -27,7 +27,6 @@ library
   exposed-modules:
       Booking
       Lib
-      Tui
   other-modules:
       Paths_table_booking
   hs-source-dirs:
