@@ -32,6 +32,8 @@ data State =
     | ChooseTime
     | EditForm
 
+data Actions = Back | Quit
+
 
 type Tables = [Table]
 type Times = [UTCTime]
@@ -160,8 +162,8 @@ bookTable :: Tables ->
 bookTable tables bookT interval name phone persons  = 
     newTables where
         reserveSlots = filter(\x -> bookT <= time x 
-                 && isFree x 
-                 && (addUTCTime (realToFrac interval) bookT) > time x) tables
+                && isFree x 
+                && (addUTCTime (realToFrac interval) bookT) > time x) tables
         times = nub (map (\x -> time x) reserveSlots)
         indexes = map (\time_ -> (findIndices(\table -> 
                                  time table == time_ &&
@@ -249,7 +251,7 @@ saveTables tables = do
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
             clearScreen
-            putStrLn $  adminMsg 
+            putStrLn $ adminMsg 
             choice <- getLine
             case choice of
                 "1" -> do
@@ -259,9 +261,22 @@ adminRunner tables = do
                     clearScreen
                 "3" -> do
                     clearScreen
-                    adminRunner tables
+                    putStrLn "Enter number of days:\n"
+                    days <- getLine
+                    currTime <- getCurrentTime
+                    let currDay = toGregorian $ utctDay currTime 
+                        openT = mkUTCTime currDay openH
+                        closeT = mkUTCTime currDay closeH
+                        newTables = initDays openT closeT [] 
+                                  interval tableNum (read days)
+                    saveTables newTables
+                    adminRunner newTables
+                "4" -> do
+                    clearScreen
+                    
                 "q" -> die(quitMsg)
                 otherwise -> adminRunner tables
+
 
 rWidget :: Tables -> 
            State  -> 
@@ -289,22 +304,32 @@ chDaysWidget :: Tables ->
                 Bool   ->
                 IO()
 chDaysWidget tables widget choice1 choice2 ret = do
-        let days = showDays tables 
+        let days = showDays tables
+            dLen = length days
         clearScreen
-        putStrLn . dayWidget $ days 
-        choice <- getLine
-        if choice == "b" then do
-             if ret then
-                adminRunner tables 
-             else
+        if dLen == 0 then do
+            putStrLn "No availible days. Press any key\n"
+            c <- getLine
+            if ret then 
+                adminRunner tables
+            else
                 runner tables Role "" "" ret
-        else if choice == "q" then
-             die(quitMsg)
-        else if isNum choice then 
-             runner tables ChooseTime choice "" ret
         else do
-             putStrLn $ invOptMsh 
-             runner tables ChooseDay "" "" ret
+             putStrLn . dayWidget $ days 
+             choice <- getLine
+             if choice == "b" then do
+                if ret then
+                    adminRunner tables 
+                else
+                    runner tables Role "" "" ret
+             else if choice == "q" then
+                die(quitMsg)
+             else if isNum choice && (read choice) <= dLen
+                             && (read choice) > 0 then 
+                  runner tables ChooseTime choice "" ret
+             else do
+                putStrLn $ invOptMsh 
+                runner tables ChooseDay "" "" ret
 
 
 chTimeWidget :: Tables ->
@@ -353,14 +378,15 @@ formWidget tables widget choice1 choice2 ret = do
                 putStrLn $ personsErrMsg 
                 runner tables EditForm choice1 choice2 ret
             else do
-                putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" ++ persons
+                putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" 
+                                                        ++ persons
                 putStrLn $ correctMsg 
                 c <- getLine
                 if c /= "y" then
                     runner tables EditForm choice1 choice2 ret
                 else do 
                     let days2 = bookTable tables bookTime bookInterval 
-                                (Just name) (Just phone) (Just(read persons))
+                               (Just name) (Just phone) (Just(read persons))
                     saveTables days2 
                     putStr $ successMsg 
                     putStrLn . show $ bookTime
@@ -396,16 +422,9 @@ book = do
     currTime <- getCurrentTime
     contents <- BS.readFile cnfName 
     let currDay = toGregorian $ utctDay currTime 
-        openT = mkUTCTime currDay openH
-        closeT = mkUTCTime currDay closeH
-        days = 1 
-        day = initDays openT closeT [] interval tableNum days 
-        lol = decodeStrict contents :: Maybe Tables 
-        kek = case lol of
+        loadedTables = decodeStrict contents :: Maybe Tables 
+        tables = case loadedTables of
               Just a -> a
               Nothing -> []
-    --putStrLn . show $ lol 
---    saveTables day 
-    
-    runner kek Role "" "" False    
+    runner tables Role "" "" False    
 

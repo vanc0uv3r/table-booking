@@ -46,7 +46,8 @@ rWidgetMsg =  "Welcome to table booking system\n1.Book a table\n" ++
               "2.Login to admin panel\n[q] Quit"
 
 adminMsg = "Choose the action:\n1. Book table\n2. Unbook table\n" ++ 
-              "3. Init mounth\n[q] Logout"
+              "3. Init days(will rewrite tables)\n" ++ 
+              "4. Add days to end\n[q] Logout"
 
 roleMsg = "Welcome to table booking system\n1.Book a table\n" ++
              "2.Login to admin panel\n[q] Quit"
