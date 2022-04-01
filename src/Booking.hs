@@ -37,9 +37,9 @@ data Actions = Back | Quit
 
 type Tables = [Table]
 type Times = [UTCTime]
-type Choice = String
 type Name = Maybe String
 type Phone = Maybe String
+type LastInput = Maybe String
 type Persons = Maybe Int 
 type Interval = Integer
 type Indexes = [Int]
@@ -87,8 +87,8 @@ initDays openT closeT times interval numT days =
     else []
     where
         day = initTimes openT closeT [] interval numT
-        newOpenT = addUTCTime (realToFrac (oneH * 24)) openT
-        newCloseT = addUTCTime (realToFrac (oneH * 24)) closeT 
+        newOpenT = addUTCTime (realToFrac oneD) openT
+        newCloseT = addUTCTime (realToFrac oneD) closeT 
 
 
 -- Gets open time, close time, list of tables, interval, 
@@ -129,9 +129,10 @@ showBookTimes times = nub res
     where
         res = map (\x -> time x) . filter(not . isFree) $ times
 
+
 getLastDay :: Tables -> (Integer, Int, Int) 
 getLastDay tables = toGregorian $ utctDay lastTime where
-                    lastTime = addUTCTime (realToFrac(24 * oneH)) 
+                    lastTime = addUTCTime (realToFrac oneD) 
                                           (time (last tables)) 
 
 showDayTables :: Tables ->
@@ -238,10 +239,17 @@ isNum xs  =
     _        -> False
 
 
+phoneExists :: Tables -> Phone -> Bool
+phoneExists tables phone_ = case (find (\tab -> phone tab == phone_) tables) of
+                     Just a -> True
+                     Nothing -> False
+
+
 saveTables :: Tables -> IO()
 saveTables tables = do
             let encoded = encode $ tables
             B.writeFile cnfName encoded
+
 
 unBookWidget :: Tables -> IO()
 unBookWidget tables = do
@@ -250,10 +258,12 @@ unBookWidget tables = do
              phone <- getLine
              if phone == "b" then
                  adminRunner tables
-             else do 
+             else if (phoneExists tables (Just phone)) then do 
                 let newTables = unBookTable tables (Just phone)
                 saveTables newTables
-                adminRunner newTables 
+                adminRunner newTables
+             else
+                unBookWidget tables
 
 
 addDaysWidget :: Tables -> IO()
@@ -305,21 +315,24 @@ adminRunner tables = do
             case choice of
                 "1" -> do
                     clearScreen
-                    runner tables ChooseDay "" "" True
+                    runner tables ChooseDay Nothing Nothing True
                 "2" -> do
                     unBookWidget tables
                 "3" -> do
                     initDaysWidget tables
                 "4" -> do
-                    addDaysWidget tables
+                    if (length tables) == 0 then
+                        initDaysWidget tables
+                    else
+                        addDaysWidget tables
                 "q" -> die(quitMsg)
                 otherwise -> adminRunner tables
 
 
 rWidget :: Tables   -> 
            State    -> 
-           String   -> 
-           String   -> 
+           LastInput   -> 
+           LastInput   -> 
            ToReturn ->
            IO()
 rWidget tables widget _ _ ret = do
@@ -328,17 +341,17 @@ rWidget tables widget _ _ ret = do
           if choice == "2" then
               adminRunner tables
           else if choice == "1" then 
-              runner tables ChooseDay "" "" ret
+              runner tables ChooseDay Nothing Nothing ret
           else if choice == "q" then
               die(quitMsg)
           else
-              runner tables Role "" "" ret
+              runner tables Role Nothing Nothing ret
   
   
 chDaysWidget :: Tables   ->
                 State    ->
-                String   ->
-                String   ->
+                LastInput   ->
+                LastInput   ->
                 ToReturn ->
                 IO()
 chDaysWidget tables widget choice1 choice2 ret = do
@@ -351,7 +364,7 @@ chDaysWidget tables widget choice1 choice2 ret = do
             if ret then 
                 adminRunner tables
             else
-                runner tables Role "" "" ret
+                runner tables Role Nothing Nothing ret
         else do
              putStrLn . dayWidget $ days 
              choice <- getLine
@@ -359,26 +372,29 @@ chDaysWidget tables widget choice1 choice2 ret = do
                 if ret then
                     adminRunner tables 
                 else
-                    runner tables Role "" "" ret
+                    runner tables Role Nothing Nothing ret
              else if choice == "q" then
                 die(quitMsg)
              else if isNum choice && (read choice) <= dLen
                              && (read choice) > 0 then 
-                  runner tables ChooseTime choice "" ret
+                  runner tables ChooseTime (Just choice) Nothing ret
              else do
                 putStrLn $ invOptMsh 
-                runner tables ChooseDay "" "" ret
+                runner tables ChooseDay Nothing Nothing ret
 
 
 chTimeWidget :: Tables   ->
                 State    ->
-                String   ->
-                String   ->
+                LastInput   ->
+                LastInput   ->
                 ToReturn ->
                 IO()
 chTimeWidget tables widget choice1 choice2 ret = do
         let days = showDays tables
-            day = days !! ((read choice1) - 1)
+            day = days !! (ch - 1) where
+                ch = case choice1 of
+                    Just a -> (read a)
+                    Nothing -> 0
             dayTables = showDayTables tables day
             dLen = length dayTables
         if dLen == 0 then do
@@ -387,34 +403,40 @@ chTimeWidget tables widget choice1 choice2 ret = do
             if ret then 
                 adminRunner tables
             else
-                runner tables Role "" "" ret
+                runner tables Role Nothing Nothing ret
         else do
             clearScreen
             putStrLn . timesWidget $ dayTables
             choice <- getLine
             if choice == "b" then
-                runner tables ChooseDay "" "" ret
+                runner tables ChooseDay Nothing Nothing ret
             else if choice == "q" then 
                 die(quitMsg)
             else if isNum choice && (read choice) <= dLen
                              && (read choice) > 0 then 
-                runner tables EditForm choice1 choice ret
+                runner tables EditForm choice1 (Just choice) ret
             else do
                 putStrLn $ invOptMsh 
-                runner tables ChooseTime choice1 "" ret
+                runner tables ChooseTime choice1 Nothing ret
 
 
 formWidget :: Tables   ->
               State    ->
-              String   ->
-              String   ->
+              LastInput   ->
+              LastInput   ->
               ToReturn ->
               IO()
 formWidget tables widget choice1 choice2 ret = do
             let days = showDays tables
-                day = days !! ((read choice1) - 1)
+                day = days !! (ch - 1) where
+                    ch = case choice1 of
+                        Just a -> (read a)
+                        Nothing -> 0
                 dayTables = showDayTables tables day
-                bookTime = dayTables !! ((read choice2) - 1)        
+                bookTime = dayTables !! (ch - 1) where
+                    ch = case choice2 of
+                        Just a -> (read a)
+                        Nothing -> 0
             putStrLn $ nameMsg
             name <- getLine
             putStrLn $ phoneMsg
@@ -441,20 +463,20 @@ formWidget tables widget choice1 choice2 ret = do
                     if ret then
                         adminRunner days2
                     else
-                        runner days2 Role "" "" ret
+                        runner days2 Role Nothing Nothing ret
 
 
 runner :: Tables   ->
           State    -> 
-          String   -> 
-          String   ->
+          LastInput -> 
+          LastInput ->
           ToReturn ->
           IO ()
 runner tables widget choice1 choice2 ret = do
     case widget of
         Role -> do
             clearScreen
-            rWidget tables widget "" "" ret
+            rWidget tables widget Nothing Nothing ret
         ChooseDay -> do
             chDaysWidget tables widget choice1 choice2 ret
         ChooseTime -> do
@@ -474,5 +496,5 @@ book = do
         tables = case loadedTables of
               Just a -> a
               Nothing -> []
-    runner tables Role "" "" False    
+    runner tables Role Nothing Nothing False    
 
