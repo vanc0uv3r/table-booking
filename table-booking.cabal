@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
       Booking
+      Config
+      Consts
       Lib
   other-modules:
       Paths_table_booking
