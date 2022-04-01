@@ -47,6 +47,8 @@ type TablesNum = Integer
 type DaysNum = Integer
 type OpenTime = UTCTime
 type CloseTime = UTCTime
+type ToReturn = Bool
+
 
 data Table = Table {time :: UTCTime,
                     isFree :: Bool,
@@ -129,8 +131,8 @@ showBookTimes times = nub res
 
 getLastDay :: Tables -> (Integer, Int, Int) 
 getLastDay tables = toGregorian $ utctDay lastTime where
-                    lastTime = time (last tables)
-
+                    lastTime = addUTCTime (realToFrac(24 * oneH)) 
+                                          (time (last tables)) 
 
 showDayTables :: Tables ->
                  Day ->
@@ -179,21 +181,12 @@ bookTable tables bookT interval name phone persons  =
 -- Gets list of tables, time of booked table, phone
 -- returns updated list with unbooked table
 unBookTable :: Tables ->
-            --   Interval -> 
-            --   OpenTime -> 
                Phone -> 
                Tables
 unBookTable tables phone_ = 
     newTables where
-         --reserveSlots = filter(\x -> bookT <= time x &&
-         --          (addUTCTime (realToFrac interval) bookT) > time x) tables
-         --times = nub (map (\x -> time x) reserveSlots)
          indexes = findIndices(\table ->
                               phone table == phone_) tables
-         --indexes = map (\time_ -> (findIndices(\table ->
-         --                         time table == time_ &&
-         --                         not (isFree table) &&
-         --                         phone table == phone_) tables) 
          newTables = helper tables indexes True Nothing Nothing Nothing 
 
 
@@ -255,9 +248,12 @@ unBookWidget tables = do
              clearScreen
              putStrLn $ enterPhoneMsg 
              phone <- getLine
-             let newTables = unBookTable tables (Just phone)
-             saveTables newTables
-             adminRunner newTables 
+             if phone == "b" then
+                 adminRunner tables
+             else do 
+                let newTables = unBookTable tables (Just phone)
+                saveTables newTables
+                adminRunner newTables 
 
 
 addDaysWidget :: Tables -> IO()
@@ -265,14 +261,20 @@ addDaysWidget tables = do
               clearScreen
               putStrLn $ enterDaysMsg
               days <- getLine
-              currTime <- getCurrentTime
-              let currDay = getLastDay $ tables 
-                  openT = mkUTCTime currDay openH
-                  closeT = mkUTCTime currDay closeH
-                  newTables = initDays openT closeT [] 
+              if days == "b" then
+                 adminRunner tables
+              else if isNum days && (read days) > 0 
+                      && (read days) < 100 then do
+                  currTime <- getCurrentTime
+                  let currDay = getLastDay $ tables 
+                      openT = mkUTCTime currDay openH
+                      closeT = mkUTCTime currDay closeH
+                      newTables = initDays openT closeT [] 
                            interval tableNum (read days)
-              saveTables (tables ++ newTables)
-              adminRunner (tables ++ newTables) 
+                  saveTables (tables ++ newTables)
+                  adminRunner (tables ++ newTables)
+              else
+                  addDaysWidget tables
 
 
 initDaysWidget :: Tables -> IO()
@@ -280,15 +282,20 @@ initDaysWidget tables = do
                clearScreen
                putStrLn $ enterDaysMsg
                days <- getLine
-               currTime <- getCurrentTime
-               let currDay = toGregorian $ utctDay currTime 
-                   openT = mkUTCTime currDay openH
-                   closeT = mkUTCTime currDay closeH
-                   newTables = initDays openT closeT [] 
+               if days == "b" then
+                   adminRunner tables
+               else if isNum days && (read days) > 0 
+                      && (read days) < 100 then do
+                   currTime <- getCurrentTime
+                   let currDay = toGregorian $ utctDay currTime 
+                       openT = mkUTCTime currDay openH
+                       closeT = mkUTCTime currDay closeH
+                       newTables = initDays openT closeT [] 
                           interval tableNum (read days)
-               saveTables newTables
-               adminRunner newTables
-
+                   saveTables newTables
+                   adminRunner newTables
+               else
+                   initDaysWidget tables 
 
 adminRunner :: Tables -> IO ()
 adminRunner tables = do
@@ -309,11 +316,11 @@ adminRunner tables = do
                 otherwise -> adminRunner tables
 
 
-rWidget :: Tables -> 
-           State  -> 
-           String -> 
-           String -> 
-           Bool   ->
+rWidget :: Tables   -> 
+           State    -> 
+           String   -> 
+           String   -> 
+           ToReturn ->
            IO()
 rWidget tables widget _ _ ret = do
           putStrLn $ roleMsg 
@@ -326,13 +333,13 @@ rWidget tables widget _ _ ret = do
               die(quitMsg)
           else
               runner tables Role "" "" ret
-
-
-chDaysWidget :: Tables ->
-                State  ->
-                String ->
-                String ->
-                Bool   ->
+  
+  
+chDaysWidget :: Tables   ->
+                State    ->
+                String   ->
+                String   ->
+                ToReturn ->
                 IO()
 chDaysWidget tables widget choice1 choice2 ret = do
         let days = showDays tables
@@ -363,35 +370,45 @@ chDaysWidget tables widget choice1 choice2 ret = do
                 runner tables ChooseDay "" "" ret
 
 
-chTimeWidget :: Tables ->
-                State  ->
-                String ->
-                String ->
-                Bool   ->
+chTimeWidget :: Tables   ->
+                State    ->
+                String   ->
+                String   ->
+                ToReturn ->
                 IO()
 chTimeWidget tables widget choice1 choice2 ret = do
         let days = showDays tables
             day = days !! ((read choice1) - 1)
             dayTables = showDayTables tables day
-        clearScreen
-        putStrLn . timesWidget $ dayTables
-        choice <- getLine
-        if choice == "b" then
-            runner tables ChooseDay "" "" ret
-        else if choice == "q" then 
-            die(quitMsg)
-        else if isNum choice then 
-            runner tables EditForm choice1 choice ret
+            dLen = length dayTables
+        if dLen == 0 then do
+            putStrLn $ noDaysMsg
+            c <- getLine
+            if ret then 
+                adminRunner tables
+            else
+                runner tables Role "" "" ret
         else do
-            putStrLn $ invOptMsh 
-            runner tables ChooseTime choice1 "" ret
+            clearScreen
+            putStrLn . timesWidget $ dayTables
+            choice <- getLine
+            if choice == "b" then
+                runner tables ChooseDay "" "" ret
+            else if choice == "q" then 
+                die(quitMsg)
+            else if isNum choice && (read choice) <= dLen
+                             && (read choice) > 0 then 
+                runner tables EditForm choice1 choice ret
+            else do
+                putStrLn $ invOptMsh 
+                runner tables ChooseTime choice1 "" ret
 
 
-formWidget :: Tables ->
-              State  ->
-              String ->
-              String ->
-              Bool   ->
+formWidget :: Tables   ->
+              State    ->
+              String   ->
+              String   ->
+              ToReturn ->
               IO()
 formWidget tables widget choice1 choice2 ret = do
             let days = showDays tables
@@ -427,11 +444,11 @@ formWidget tables widget choice1 choice2 ret = do
                         runner days2 Role "" "" ret
 
 
-runner :: Tables ->
-          State  -> 
-          String -> 
-          String ->
-          Bool   ->
+runner :: Tables   ->
+          State    -> 
+          String   -> 
+          String   ->
+          ToReturn ->
           IO ()
 runner tables widget choice1 choice2 ret = do
     case widget of
