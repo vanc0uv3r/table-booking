@@ -20,7 +20,9 @@ module Consts
        checkDataMsg,
        enterPhoneMsg,
        enterDaysMsg,
-       noDaysMsg
+       noDaysMsg,
+       passMsg,
+       wrongPassMsg,
      ) where
 
 oneM = 60
@@ -65,4 +67,7 @@ enterPhoneMsg = "Enter phone of person:\n"
 
 enterDaysMsg = "Enter number of days:\n"
 
+passMsg = "Enter the password for admin:\n"
+
+wrongPassMsg = "Wrong password!\n"
 noDaysMsg = "No availible days. Press any key\n"
