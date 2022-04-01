@@ -254,73 +254,90 @@ adminRunner tables = do
             case choice of
                 "1" -> do
                     clearScreen
-                    runner tables ChooseDay "" ""
+                    runner tables ChooseDay "" "" True
+                "2" -> do
+                    clearScreen
+                "3" -> do
+                    clearScreen
+                    adminRunner tables
+                "q" -> die(quitMsg)
+                otherwise -> adminRunner tables
 
-
-rWidget :: Tables -> State -> String -> String -> IO()
-rWidget tables widget _ _ = do
+rWidget :: Tables -> 
+           State  -> 
+           String -> 
+           String -> 
+           Bool   ->
+           IO()
+rWidget tables widget _ _ ret = do
           putStrLn $ roleMsg 
           choice <- getLine
           if choice == "2" then
               adminRunner tables
           else if choice == "1" then 
-              runner tables ChooseDay "" ""
+              runner tables ChooseDay "" "" ret
           else if choice == "q" then
               die(quitMsg)
           else
-              runner tables Role "" ""
+              runner tables Role "" "" ret
 
 
 chDaysWidget :: Tables ->
                 State  ->
                 String ->
                 String ->
+                Bool   ->
                 IO()
-chDaysWidget tables widget choice1 choice2 = do
+chDaysWidget tables widget choice1 choice2 ret = do
         let days = showDays tables 
         clearScreen
         putStrLn . dayWidget $ days 
         choice <- getLine
-        if choice == "b" then
-             runner tables Role "" "" 
+        if choice == "b" then do
+             if ret then
+                adminRunner tables 
+             else
+                runner tables Role "" "" ret
         else if choice == "q" then
              die(quitMsg)
         else if isNum choice then 
-             runner tables ChooseTime choice ""
+             runner tables ChooseTime choice "" ret
         else do
              putStrLn $ invOptMsh 
-             runner tables ChooseDay "" ""
+             runner tables ChooseDay "" "" ret
 
 
 chTimeWidget :: Tables ->
                 State  ->
                 String ->
                 String ->
+                Bool   ->
                 IO()
-chTimeWidget tables widget choice1 choice2 = do
+chTimeWidget tables widget choice1 choice2 ret = do
         let days = showDays tables
             day = days !! ((read choice1) - 1)
             dayTables = showDayTables tables day
         clearScreen
         putStrLn . timesWidget $ dayTables
         choice <- getLine
-        if choice == "b" then 
-            runner tables ChooseDay "" "" 
+        if choice == "b" then
+            runner tables ChooseDay "" "" ret
         else if choice == "q" then 
             die(quitMsg)
         else if isNum choice then 
-            runner tables EditForm choice1 choice
+            runner tables EditForm choice1 choice ret
         else do
             putStrLn $ invOptMsh 
-            runner tables ChooseTime choice1 ""
+            runner tables ChooseTime choice1 "" ret
 
 
 formWidget :: Tables ->
               State  ->
               String ->
               String ->
+              Bool   ->
               IO()
-formWidget tables widget choice1 choice2 = do
+formWidget tables widget choice1 choice2 ret = do
             let days = showDays tables
                 day = days !! ((read choice1) - 1)
                 dayTables = showDayTables tables day
@@ -334,37 +351,42 @@ formWidget tables widget choice1 choice2 = do
             clearScreen
             if not (isNum persons) then do
                 putStrLn $ personsErrMsg 
-                runner tables EditForm choice1 choice2
+                runner tables EditForm choice1 choice2 ret
             else do
                 putStrLn $ checkDataMsg ++ name ++ "\n" ++ phone ++ "\n" ++ persons
                 putStrLn $ correctMsg 
                 c <- getLine
                 if c /= "y" then
-                    runner tables EditForm choice1 choice2
+                    runner tables EditForm choice1 choice2 ret
                 else do 
                     let days2 = bookTable tables bookTime bookInterval 
                                 (Just name) (Just phone) (Just(read persons))
                     saveTables days2 
                     putStr $ successMsg 
                     putStrLn . show $ bookTime
+                    if ret then
+                        adminRunner days2
+                    else
+                        runner days2 Role "" "" ret
 
 
 runner :: Tables ->
-          State -> 
+          State  -> 
           String -> 
           String ->
+          Bool   ->
           IO ()
-runner tables widget choice1 choice2 = do
+runner tables widget choice1 choice2 ret = do
     case widget of
         Role -> do
             clearScreen
-            rWidget tables widget "" ""
+            rWidget tables widget "" "" ret
         ChooseDay -> do
-            chDaysWidget tables widget choice1 choice2
+            chDaysWidget tables widget choice1 choice2 ret
         ChooseTime -> do
-            chTimeWidget tables widget choice1 choice2
+            chTimeWidget tables widget choice1 choice2 ret
         EditForm -> do 
-            formWidget tables widget choice1 choice2
+            formWidget tables widget choice1 choice2 ret
 
 
 book :: IO()
@@ -379,7 +401,11 @@ book = do
         days = 1 
         day = initDays openT closeT [] interval tableNum days 
         lol = decodeStrict contents :: Maybe Tables 
-    putStrLn . show $ lol 
-    saveTables day 
-    --runner day Role "" ""    
+        kek = case lol of
+              Just a -> a
+              Nothing -> []
+    --putStrLn . show $ lol 
+--    saveTables day 
+    
+    runner kek Role "" "" False    
 
