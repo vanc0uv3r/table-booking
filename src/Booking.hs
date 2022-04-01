@@ -500,6 +500,7 @@ formWidget tables widget choice1 choice2 ret = do
                     saveTables days2 
                     putStr $ successMsg 
                     putStrLn . show $ bookTime
+                    t <- getLine
                     if ret then
                         adminRunner days2
                     else

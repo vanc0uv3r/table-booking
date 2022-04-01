@@ -56,12 +56,12 @@ rWidgetMsg =  "Welcome to table booking system\n1.Book a table\n" ++
 
 adminMsg = "Choose the action:\n1. Book table\n2. Unbook table\n" ++ 
               "3. Init days(will rewrite tables)\n" ++ 
-              "4. Add days to end\n[q] Logout"
+              "4. Add days to end\n[q] Quit\n[l] Logout"
 
 roleMsg = "Welcome to table booking system\n1.Book a table\n" ++
              "2.Login to admin panel\n[q] Quit"
 
-lastPicksMsg = "\n[b]. Go back\n[q].Quit"
+lastPicksMsg = "\n[b] Go back\n[q] Quit"
 
 checkDataMsg = "Check your data:\n"
 
@@ -73,6 +73,8 @@ enterDaysMsg = "Enter number of days:\n"
 passMsg = "Enter the password for admin:\n"
 
 uniquePhoneMsg = "This phone number already exists in database"
+
+contMsg = "Press any key to continue"
 
 wrongPassMsg = "Wrong password!\n"
 noDaysMsg = "No availible days. Press any key\n"
