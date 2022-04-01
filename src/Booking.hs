@@ -9,6 +9,7 @@ module Booking
 import System.IO
 import Data.Aeson
 import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as BS
 import GHC.Generics
 import Data.Time
 import Data.Maybe
@@ -49,6 +50,9 @@ data Table = Table {time :: UTCTime,
                     persons :: Maybe Int 
 } deriving (Show, Generic)
 
+
+instance FromJSON Table 
+instance ToJSON Table 
 
 
 -- Get date in format yy-mm-dd hh-mm-ss and return UTCTime object 
@@ -131,12 +135,6 @@ showDayTables tables day = res2
 timeToString :: Times -> [String]
 timeToString times = map (formatTime defaultTimeLocale "%H:%M") times 
 
-
-showDays :: Tables ->
-            [Day] 
-showDays tables = res
-    where
-        tmp = filter (isFree) tables
 
 
 showDays :: Tables ->
@@ -242,6 +240,11 @@ isNum xs  =
     _        -> False
 
 
+saveTables :: Tables -> IO()
+saveTables tables = do
+            let encoded = encode $ tables
+            B.writeFile "kek.txt" encoded
+
 --adminUnbook :: Tables -> IO()
 --adminUnbook tables = do
                         
@@ -282,15 +285,15 @@ chDaysWidget tables widget choice1 choice2 = do
         clearScreen
         putStrLn . dayWidget $ days 
         choice <- getLine
-        if choice == "b" 
-            then runner tables Role "" "" 
-            else if choice == "q" 
-                then die("Quiting...")
-                else if isNum choice 
-                    then runner tables ChooseTime choice ""
-                    else do
-                        putStrLn "Invalid option"
-                        runner tables ChooseDay "" ""
+        if choice == "b" then
+             runner tables Role "" "" 
+        else if choice == "q" then
+             die("Quiting...")
+        else if isNum choice then 
+             runner tables ChooseTime choice ""
+        else do
+             putStrLn "Invalid option"
+             runner tables ChooseDay "" ""
 
 
 chTimeWidget :: Tables ->
@@ -305,15 +308,15 @@ chTimeWidget tables widget choice1 choice2 = do
         clearScreen
         putStrLn . timesWidget $ dayTables
         choice <- getLine
-        if choice == "b" 
-            then runner tables ChooseDay "" "" 
-            else if choice == "q" 
-                then die("Quiting...")
-                else if isNum choice 
-                    then runner tables EditForm choice1 choice
-                    else do
-                        putStrLn "Invalid option"
-                        runner tables ChooseTime choice1 ""
+        if choice == "b" then 
+            runner tables ChooseDay "" "" 
+        else if choice == "q" then 
+            die("Quiting...")
+        else if isNum choice then 
+            runner tables EditForm choice1 choice
+        else do
+            putStrLn "Invalid option"
+            runner tables ChooseTime choice1 ""
 
 
 formWidget :: Tables ->
@@ -344,12 +347,12 @@ formWidget tables widget choice1 choice2 = do
                 if c /= "y" then
                     runner tables EditForm choice1 choice2
                 else do 
-                    let kek = Just name 
-                        kek1 = Just phone
-                        kek2 = Just(read persons) 
-                        days2 = bookTable tables bookTime 7200 kek kek1 kek2
+                    let days2 = bookTable tables bookTime 7200 (Just name)  (Just phone) (Just(read persons))
+                    saveTables days2 
                     putStr "You have successfuly booked the table on "
                     putStrLn . show $ bookTime
+
+
 runner :: Tables ->
           State -> 
           String -> 
@@ -367,17 +370,13 @@ runner tables widget choice1 choice2 = do
         EditForm -> do 
             formWidget tables widget choice1 choice2
 
-readConfig :: IO()
-readConfig = do
-        putStrLn . show $ contents
 
 book :: IO()
 book = do
     hSetBuffering stdout NoBuffering 
     clearScreen
     currTime <- getCurrentTime
-    handle <- openFile "cfg.txt" ReadMode
-    contents <- hGetContents handle    
+    contents <- BS.readFile "kek.txt"
     let currDay = toGregorian $ utctDay currTime 
         openT = mkUTCTime currDay (10, 0, 0)
         closeT = mkUTCTime currDay (22, 0, 0)
@@ -390,6 +389,8 @@ book = do
         persons = Just 2
         bookT = mkUTCTime currDay (10, 00, 0)
         day = initDays openT closeT [] interval tableNum days 
-    readConfig 
-    -- runner day Role "" ""    
+        lol = decodeStrict contents :: Maybe Tables 
+    putStrLn . show $ lol 
+    saveTables day 
+    --runner day Role "" ""    
 
