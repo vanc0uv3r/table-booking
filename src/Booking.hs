@@ -127,6 +127,10 @@ showBookTimes times = nub res
     where
         res = map (\x -> time x) . filter(not . isFree) $ times
 
+getLastDay :: Tables -> (Integer, Int, Int) 
+getLastDay tables = toGregorian $ utctDay lastTime where
+                    lastTime = time (last tables)
+
 
 showDayTables :: Tables ->
                  Day ->
@@ -212,6 +216,7 @@ helper tables (x:xs) book_ name_ phone_ persons_ =
                                                     phone = phone_, 
                                                     persons = persons_}
 
+
 numberList :: Show a => Int -> [a] -> String
 numberList _ [] = ""
 numberList num (x:xs) = "\n" ++ show num ++ ". " ++ show x ++ 
@@ -243,9 +248,6 @@ saveTables tables = do
             let encoded = encode $ tables
             B.writeFile cnfName encoded
 
---adminUnbook :: Tables -> IO()
---adminUnbook tables = do
-                        
 
 
 adminRunner :: Tables -> IO ()
@@ -273,7 +275,16 @@ adminRunner tables = do
                     adminRunner newTables
                 "4" -> do
                     clearScreen
-                    
+                    putStrLn "Enter number of days:\n"
+                    days <- getLine
+                    currTime <- getCurrentTime
+                    let currDay = getLastDay $ tables 
+                        openT = mkUTCTime currDay openH
+                        closeT = mkUTCTime currDay closeH
+                        newTables = initDays openT closeT [] 
+                                  interval tableNum (read days)
+                    saveTables (tables ++ newTables)
+                    adminRunner (tables ++ newTables) 
                 "q" -> die(quitMsg)
                 otherwise -> adminRunner tables
 
