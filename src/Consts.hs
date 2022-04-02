@@ -1,36 +1,15 @@
-module Consts
-    (
-       oneM,
-       oneH,
-       oneD,
-       nameMsg,
-       phoneMsg,
-       personsMsg,
-       correctMsg,
-       personsErrMsg,
-       successMsg,
-       quitMsg,
-       chDayMsg,
-       chTimeMsg,
-       invOptMsh,
-       rWidgetMsg,
-       adminMsg,
-       roleMsg,
-       lastPicksMsg,
-       checkDataMsg,
-       enterPhoneMsg,
-       enterDaysMsg,
-       noDaysMsg,
-       passMsg,
-       wrongPassMsg,
-       phoneErrMsg,
-       uniquePhoneMsg,
-        contMsg
-        ) where
+module Consts where
 
 oneM = 60
 oneH = oneM * 60
 oneD = 24 * oneH
+
+
+minDays :: Integer
+maxDays :: Integer
+
+minDays = 0
+maxDays = 100
 
 oneM :: Int
 oneH :: Int
